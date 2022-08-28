@@ -2,8 +2,8 @@ cloud: aws
 platform: k8s
 clusters: 1
 nodes: 3
-k8s_version: 1.21.11
-px_version: 2.10.3
+k8s_version: 1.24.4
+px_version: 2.11.2
 stop_after: 6
 post_script: show-ip
 quiet: false
@@ -24,18 +24,18 @@ azure_type: Standard_B2ms
 azure_disks: "50"
 #azure_disks: "100 200"
 
-vsphere_host: 10.14.8x.xxx
-vsphere_user: xxx@xxxx.local
-vsphere_password: xxxx
-vsphere_compute_resource: "PX-EE"
-#vsphere_resource_pool: "PtWx Cluster"
-vsphere_template: sen-template
-vsphere_datastore: xxxx-21
-#vsphere_folder: /Sen
-vsphere_disks: "150"
-vsphere_network: "VM Network"
-vsphere_memory: 16
-vsphere_cpu: 8
+vsphere_host: XXX
+vsphere_user: XXX
+vsphere_password: XXX
+vsphere_compute_resource: XXX
+vsphere_resource_pool: XXX
+vsphere_template: XXX
+vsphere_datastore: XXX
+vsphere_folder: XXX
+vsphere_disks: XXX
+vsphere_network: XXX
+vsphere_memory: 8
+vsphere_cpu: 4
 
 
 ocp4_domain: openshift.portworx.com
