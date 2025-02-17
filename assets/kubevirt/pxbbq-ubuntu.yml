@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: pxbbq-web
-        image: quay.io/px-tme/pxbbq:v4.6.0
+        image: quay.io/px-tme/pxbbq:v4.6.1
         env:
         - name: MONGO_INIT_USER
           value: "porxie" #Mongo User with permissions to create additional databases and users. Typically "porxie" or "pds"
@@ -194,7 +194,13 @@ spec:
                   - sed -i 's/127.0.0.1/0.0.0.0/' /etc/mongod.conf
                   - systemctl enable --now mongod
                   - sleep 5
-                  - mongosh /tmp/mongo.js            
+                  - mongosh /tmp/mongo.js
+                networkData: |
+                  network:
+                    version: 2
+                    ethernets:
+                      enp1s0:
+                        dhcp4: true            
           name: cloudinitdisk
   dataVolumeTemplates:
     - metadata:

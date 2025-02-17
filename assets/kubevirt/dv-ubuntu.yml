@@ -3,6 +3,8 @@ kind: DataVolume
 metadata:
   name: ubuntu-image
   namespace: pxbbq
+  labels:
+    px-dr: 'false'
   annotations:
     cdi.kubevirt.io/storage.bind.immediate.requested: "true"
     cdi.kubevirt.io/storage.usePopulator: "false"
