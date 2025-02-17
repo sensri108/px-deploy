@@ -11,10 +11,11 @@ pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret
 sleep 5
 cloud_credential_uid=$(pxbackupctl get cloudcredential -e $BACKUP_POD_IP:10002 --orgID default -o json | jq -cr '.[0].metadata.uid') 
 pxbackupctl create backuplocation --cloud-credential-name s3 --cloud-credential-Uid $cloud_credential_uid -n aws -p s3 --s3-endpoint https://s3.$aws_region.amazonaws.com --path $BACKUP_BUCKET --s3-region $aws_region -e $BACKUP_POD_IP:10002 --orgID default
-pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --name example-schedule -e $BACKUP_POD_IP:10002 --orgID default
+pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --name 15min-schedule -e $BACKUP_POD_IP:10002 --orgID default
 sleep 5
 ssh master-2 cat /root/.kube/config > /cluster-2-kube-config
 ssh master-3 cat /root/.kube/config > /cluster-3-kube-config
+pxbackupctl create cluster --name cluster-1 -k /root/.kube/.config -e $BACKUP_POD_IP:10002 --orgID default
 pxbackupctl create cluster --name cluster-2 -k /cluster-2-kube-config -e $BACKUP_POD_IP:10002 --orgID default
 pxbackupctl create cluster --name cluster-3 -k /cluster-3-kube-config -e $BACKUP_POD_IP:10002 --orgID default
 
