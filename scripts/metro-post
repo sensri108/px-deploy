@@ -8,7 +8,7 @@ fi
 
 while : ; do
   n=$(ssh master-1 'kubectl exec -it -n portworx -c portworx $(kubectl get pod -n portworx -lname=portworx -o jsonpath="{.items[0].metadata.name}") -- curl http://localhost:'$port'/status | jq .QuorumMap | grep true | wc -l')
-  [ $n -eq $[$nodes*$clusters] ] && break
+  [ $n -eq $[$nodes*2] ] && break
   sleep 1
   echo Waiting for Portworx cluster to come up after patching
 done
