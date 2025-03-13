@@ -104,7 +104,7 @@ cat <<EOF >./tmp/vsphere-rocky.json
           "network_card": "vmxnet3"
         }
       ],
-      "notes": "https://github.com/andrewh1978/px-deploy \n Template ID {{user \`pxd-templateid\`}}",
+      "notes": "https://github.com/purestorage-openconnect/px-deploy \n Template ID {{user \`pxd-templateid\`}}",
       "password": "{{user \`vsphere-password\`}}",
       "destroy": "true",
       "resource_pool": "{{user \`vsphere-resource-pool\`}}",

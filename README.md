@@ -56,7 +56,7 @@ Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
 [Notes for vSphere](#notes-for-vsphere)
 
-[Notes for OCP4 + AWS](https://github.com/andrewh1978/px-deploy/tree/master/docs/cloud/aws/ocp4.md)
+[Notes for OCP4 + AWS](https://github.com/purestorage-openconnect/px-deploy/tree/master/docs/cloud/aws/ocp4.md)
 
 ### Notes for Updating
 

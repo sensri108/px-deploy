@@ -1,4 +1,4 @@
-module github.com/andrewh1978/px-deploy
+module github.com/purestorage-openconnect/px-deploy
 
 go 1.21
 

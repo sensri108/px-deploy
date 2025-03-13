@@ -2044,7 +2044,7 @@ func get_version_current() string {
 }
 
 func get_version_latest() string {
-	resp, err := http.Get("https://raw.githubusercontent.com/andrewh1978/px-deploy/master/VERSION")
+	resp, err := http.Get("https://raw.githubusercontent.com/PureStorage-OpenConnect/px-deploy/master/VERSION")
 	if err != nil {
 		return ""
 	}
