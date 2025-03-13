@@ -33,7 +33,7 @@ You will need to restart your shell.
 
 4. Run the install / update script:
 ```
-curl https://raw.githubusercontent.com/andrewh1978/px-deploy/master/install.sh | bash
+curl https://raw.githubusercontent.com/PureStorage-OpenConnect/px-deploy/master/install.sh | bash
 ```
 This will:
  * pull the Docker image from Github
