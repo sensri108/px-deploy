@@ -1,6 +1,14 @@
-# next
-* bump px-backup version
+# 6.4
 
+## Improvements
+ * bump px-backup to 2.8.3
+ * bump px version to 3.2.2
+ * update pxbbq template
+ * change px-deploy github repo
+
+## Fixes
+ * fix loss of network connectivity when restoring kubevirt vm
+ * support metro-dr template running more than 2 clusters (still only 2 in metro dr)
 
 # 6.3.1
 
