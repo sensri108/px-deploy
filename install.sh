@@ -18,15 +18,15 @@ rm -rf /tmp/px-deploy.build
 mkdir /tmp/px-deploy.build
 cd /tmp/px-deploy.build
 echo Cloning repo
-git clone https://github.com/andrewh1978/px-deploy
+git clone https://github.com/PureStorage-OpenConnect/px-deploy
 cd px-deploy
 if [ -z "$ver" ]; then
   ver=$(cat VERSION)
   git checkout v$ver
 fi
 echo "Pulling image (version $ver)"
-docker pull ghcr.io/andrewh1978/px-deploy:$ver
-docker tag ghcr.io/andrewh1978/px-deploy:$ver px-deploy
+docker pull ghcr.io/purestorage-openconnect/px-deploy:$ver
+docker tag ghcr.io/purestorage-openconnect/px-deploy:$ver px-deploy
 
 #echo Building container
 #docker build $PLATFORM --network host -t px-deploy . >&/dev/null

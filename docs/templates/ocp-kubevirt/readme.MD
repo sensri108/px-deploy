@@ -2,7 +2,7 @@
 
 * ensure your px-deploy environment is able to create OCP4 deployments 
  
-* please consult the [readme](https://github.com/andrewh1978/px-deploy?tab=readme-ov-file#notes-for-ocp4-on-aws)
+* please consult the [readme](https://github.com/purestorage-openconnect/px-deploy?tab=readme-ov-file#notes-for-ocp4-on-aws)
 
 ```
 $ px-deploy create -n mydeployment -t ocp-kubevirt
