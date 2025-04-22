@@ -62,6 +62,8 @@ while [ ! "$HC" == "True" ]; do
   HC=$(kubectl get hyperconvergeds.hco.kubevirt.io kubevirt-hyperconverged -n openshift-cnv -ojson | jq -r '.status.conditions[] | select((.reason=="ReconcileCompleted") and (.status=="True") and (.type=="Available")) | .status')
 done
 
+kubectl apply -f /assets/kubevirt/storageprofile.yml
+
 # add colored console notification on OCP GUI
 if [ $cluster == "1" ]; then
   bgcolor='#fe5000'
