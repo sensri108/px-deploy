@@ -7,7 +7,6 @@ cluster:
   - id: 2
     scripts: ["clusterpair-dr"]
 env:
-  operator: true
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
   #DR_BUCKET: "<YOUR BUCKET NAME>"
 

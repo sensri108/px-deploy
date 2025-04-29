@@ -8,7 +8,6 @@ cluster:
   - id: 2
     scripts: ["clusterpair"]
 env:
-  operator: true
   #DR_BUCKET: "<YOUR BUCKET NAME>"
 
 # use `-e install_apps=true` to install the optional apps
