@@ -84,6 +84,15 @@ spec:
   source: certified-operators
   sourceNamespace: openshift-marketplace
   startingCSV: portworx-operator.v24.2.0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
 EOF
   while ! oc get csv -n portworx  | grep portworx-operator | grep -q Succeeded ; do
     sleep 2
