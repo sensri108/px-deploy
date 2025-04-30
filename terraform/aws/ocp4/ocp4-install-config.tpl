@@ -17,7 +17,7 @@ controlPlane:
   replicas: 3
 metadata:
   creationTimestamp: null
-  name: px-deploy-${tpl_configname}-${tpl_cluster}
+  name: pxd-${tpl_configname}-${tpl_cluster}
 networking:
   clusterNetwork:
   - cidr: 10.128.0.0/14
