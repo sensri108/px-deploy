@@ -1,3 +1,17 @@
+# 6.4.1
+
+## Improvements
+ * bump px-backup to 2.8.4
+ * bump OCP to 4.18.8
+ * bump k8s to 1.31.8
+ * bump EKS/GKE/AKS to 1.31
+ 
+## Fixes
+ * create StorageProfile on OCP-V 
+ * metro-dr now has fixed etcd version (:latest tag was broken on quay.io)
+ * improve px install reliability
+ * fix grafana on OCP
+
 # 6.4
 
 ## Improvements
