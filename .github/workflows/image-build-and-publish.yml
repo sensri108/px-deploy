@@ -79,6 +79,8 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           TAGS=$(echo "ghcr.io/$REPO:$VERSION" , "ghcr.io/$REPO:latest")
           echo "TAGS=$TAGS" >> $GITHUB_ENV
+          echo "Version: $VERSION "
+          echo "Tags: $TAGS"
           
       - name: Create tags (version only) if this is NOT a release
         if: github.event_name != 'release'
