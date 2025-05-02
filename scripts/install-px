@@ -144,8 +144,16 @@ chmod +x /usr/local/bin/pxc-pxctl
 echo "alias pxctl='kubectl pxc pxctl'" >>/root/.bashrc
 kubectl-pxc config cluster set --portworx-service-namespace=portworx
 
+# Wait for cluster readiness
+while ! kubectl get stc -A -n portworx | grep -q 'Running\|Online'; do
+  echo "Waiting for StorageCluster status online"
+  sleep 3
+done
+
 # Install Grafana
 if [ $platform = ocp4 ]; then
+  kubectl patch StorageCluster px-deploy-$cluster -n portworx --type merge --patch '{"spec": {"monitoring": {"prometheus": {"alertManager": {"enabled": false}}}}}'
+  kubectl patch StorageCluster px-deploy-$cluster -n portworx --type merge --patch '{"spec": {"monitoring": {"prometheus": {"enabled": false}}}}'
   kubectl apply -n portworx -f https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-service-account.yaml
   oc -n portworx adm policy add-cluster-role-to-user cluster-monitoring-view -z grafana
   TOKEN=$(oc -n portworx create token grafana --duration=8760h)
@@ -172,10 +180,10 @@ if [ $platform != eks ] && [ $platform != gke ] && [ $platform != ocp4 ] && [ $p
 fi
 
 # Wait for cluster readiness
-while ! kubectl get stc -A -n portworx | grep -q 'Running\|Online'; do
-  echo "Waiting for StorageCluster status online"
-  sleep 3
-done
+#while ! kubectl get stc -A -n portworx | grep -q 'Running\|Online'; do
+#  echo "Waiting for StorageCluster status online"
+#  sleep 3
+#done
 
 # install storkctl
 STORK_POD=$(kubectl get pods -n portworx -l name=stork -o jsonpath='{.items[0].metadata.name}')
