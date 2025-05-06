@@ -8,6 +8,16 @@ helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-
 until (kubectl get po -n $NAMESPACE -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
 until (kubectl get po -n $NAMESPACE -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
 
+# sometimes mongodb pods do not start. apply workaround if detected
+echo "checking for statefulset pxc-backup-mongodb readiness"
+while ! kubectl wait  --for=jsonpath='{.status.readyReplicas}'=3 sts/pxc-backup-mongodb -n central --timeout 180s; do
+    echo "statefulset mongodb not ready"
+    POD=$(kubectl get pods -n central -l app.kubernetes.io/component=pxc-backup-mongodb -ojson | jq -r '.items[] | select(.status.containerStatuses[].ready==false) | .metadata.name' | head -n1)
+    echo "deleting data dir in failed pod $POD"
+    kubectl exec $POD -n central -- rm -rf /bitnami/mongodb/data/db
+    echo "waiting for $POD to restart"
+done
+
 # enable pxmonitor & grafana (needs a running px-backup-ui IP/Port)
 pubIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
 backupPort=$(kubectl get svc px-backup-ui -n $NAMESPACE -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
