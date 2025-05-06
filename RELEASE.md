@@ -1,3 +1,8 @@
+# 6.4.2
+
+## Fixes
+ * workaround for px-backup mongodb deployment issue
+
 # 6.4.1
 
 ## Improvements
