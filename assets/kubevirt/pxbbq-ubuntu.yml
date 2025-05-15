@@ -116,7 +116,7 @@ metadata:
     os.template.kubevirt.io/ubuntu: 'true'
   namespace: pxbbq
 spec:
-  running: true
+  runStrategy: Always
   template:
     metadata:
       annotations:
