@@ -75,8 +75,8 @@ Mention that the Migration is in the `kube-system` namespace which means we can 
 
 In the Migration, note two main parameters:
 
-* `clusterPair` - a reference to the ClusterPair object we just saw - defines *where* we are migrating
-* `namespaces` - an array of namespaces to be migrated - defines *what* we are migrating
+* `clusterPair` - a reference to the ClusterPair object we just saw - defines **where** we are migrating
+* `namespaces` - an array of namespaces to be migrated - defines **what** we are migrating
 
 7. In each cluster, show there are no apps running yet:
 
