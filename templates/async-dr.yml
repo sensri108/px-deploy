@@ -6,7 +6,7 @@ clusters: 2
 scripts: ["install-awscli", "install-px", "px-wait", "licenses"]
 cluster:
   - id: 1
-    scripts: ["aws-elb", "async-dr"]
+    scripts: ["aws-elb"]
   - id: 2
     scripts: ["clusterpair"]
 env:

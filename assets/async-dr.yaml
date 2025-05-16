@@ -1,22 +1,22 @@
 apiVersion: stork.libopenstorage.org/v1alpha1
 kind: SchedulePolicy
 metadata:
-  name: drpolicy
+  name: 5-min
 policy:
   interval:
-    intervalMinutes: 1
+    intervalMinutes: 5
 ---
 apiVersion: stork.libopenstorage.org/v1alpha1
 kind: MigrationSchedule
 metadata:
-  name: appmigrationschedule
+  name: pxbbq-migration
   namespace: kube-system
 spec:
   template:
     spec:
-      clusterPair: remotecluster-2
+      clusterPair: remotecluster
       includeResources: true
       startApplications: false
       namespaces:
-      - petclinic
-  schedulePolicyName: drpolicy
+      - pxbbq
+  schedulePolicyName: 5-min
