@@ -165,7 +165,7 @@ Show that the `replicas` parameter has been set to `0` as part of the migration.
 storkctl activate migration -n petclinic
 ```
 
-Talk about how `storkctl` is going to find all the apps, ie Deployments, StatefulSet and operator-based applications, look for those annotation and then scale everything up to where it originally was.
+Talk about how `storkctl` is going to find all the apps, ie Deployments, StatefulSets and operator-based applications, look for those annotations and then scale everything up to where they originally were.
 
 15. On cluster 2, show the pods starting:
 
