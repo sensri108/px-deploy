@@ -13,4 +13,5 @@ spec:
   startApplications: true
   # List of namespaces to migrate
   namespaces:
-  - default
+  - pxbbq
+  - petclinic
