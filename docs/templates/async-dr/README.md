@@ -94,7 +94,7 @@ In the MigrationSchedule, note three main parameters:
 
 * `clusterPair` - a reference to the ClusterPair object we just saw - defines **where** we are migrating
 * `namespaces` - an array of namespaces to be migrated - defines **what** we are migrating
-* `schedulePolicyName` - a reference to the SchedulePolicy - defines *when* we are migrating
+* `schedulePolicyName` - a reference to the SchedulePolicy - defines **when** we are migrating
 
 Also mention the `startApplications` parameter - this will patch the application specs, eg Deployments, StatefulSets and operator-based applications, to prevent them from starting on the target cluster. However, they will be annotated with the original number of application replicas, as we shall see shortly.
 
