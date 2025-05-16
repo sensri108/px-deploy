@@ -1,4 +1,4 @@
-// If you update this, you probably also want to update the Migration document
+<!-- If you update this, you probably also want to update the Migration document -->
 # Async-DR
 
 Deploys 2 clusters with Portworx, sets up and configures a ClusterPair, configures an async DR schedule with a loadbalancer in front of the setup.
