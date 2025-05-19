@@ -8,4 +8,7 @@ spec:
   includeResources: true
   startApplications: true
   namespaces:
+  - pxbbq
   - petclinic
+
+
