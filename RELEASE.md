@@ -1,3 +1,11 @@
+# 6.4.3
+
+## Improvements
+ * re-work creation of clusterpair
+ * you can now run 'storkctl perform failover...'
+ * bump px version
+ * updates on documentation
+
 # 6.4.2
 
 ## Fixes
