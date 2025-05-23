@@ -51,13 +51,8 @@ if [ "$platform" = eks ] || [ "$platform" = ocp4 ]; then
 fi
 
 #improvement: we may try to detect if DR licenses are enabled on both sides -> px api?
-if [ -z "$licenses" ]; then
-  echo '$licenses is empty. creating migration clusterpair'
-  MODE="migration"
-else
-  echo '$licenses is set. creating migration clusterpair - please ensure license is valid'
-  MODE="async-dr"
-fi
+kubectl pxc pxctl license list | grep PX-DR | grep -q yes && MODE=async-dr || MODE=migration
+echo Mode is $MODE
 
 if [ "$platform" = eks ]; then
   kubectl create secret generic --from-file=$HOME/.aws/credentials -n portworx aws-creds
@@ -67,4 +62,7 @@ if [ "$platform" = eks ]; then
   kubectl patch stc $(kubectl --kubeconfig /tmp/dest_kubeconfig get stc -n portworx -o jsonpath='{.items[].metadata.name}') -n portworx --type='json' -p '[{"op":"add","path":"/spec/stork/volumes","value":[{"mountPath":"/root/.aws","name":"aws-creds","secret":{"secretName":"aws-creds"}}]}]'
 fi
 
-storkctl create clusterpair remotecluster --namespace kube-system --dest-kube-file /tmp/dest_kubeconfig --src-kube-file /root/.kube/config --provider s3 --s3-endpoint s3.amazonaws.com --s3-access-key $AWS_ACCESS_KEY --s3-secret-key $AWS_SECRET_KEY --s3-region $BUCKET_REGION  --bucket $DR_BUCKET --mode $MODE
+while : ; do
+  storkctl create clusterpair remotecluster --namespace kube-system --dest-kube-file /tmp/dest_kubeconfig --src-kube-file /root/.kube/config --provider s3 --s3-endpoint s3.amazonaws.com --s3-access-key $AWS_ACCESS_KEY --s3-secret-key $AWS_SECRET_KEY --s3-region $BUCKET_REGION  --bucket $DR_BUCKET --mode $MODE && break
+  sleep 5
+done
