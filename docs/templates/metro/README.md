@@ -1,7 +1,7 @@
 <!-- If you update this, you probably also want to update the Migration and Async-DR documents -->
 # Metro-DR
 
-Deploys 2 clusters with Portworxs, Metro DR and an external etcd node running on master-1, sets up and configures a ClusterPair, configures a Metro DR schedule with a loadbalancer in front of the setup.
+Deploys 2 clusters with Portworx, Metro DR and an external etcd node running on master-1, sets up and configures a ClusterPair, configures a Metro DR schedule with a loadbalancer in front of the setup.
 
 # Supported Environments
 
@@ -48,11 +48,12 @@ px-deploy status -n <my-deployment-name>
 ssh master-2
 ```
 
-4. In each cluster, show they are independent Kubernetes clusters, but a single Portworx cluster:
+4. In each cluster, show they are independent Kubernetes clusters, but a single Portworx cluster with cluster domains:
 
 ```
 kubectl get nodes
 pxctl status
+pxctl cluster domains show
 ```
 
 5. In cluster 1, show the ClusterPair object:
@@ -111,19 +112,17 @@ storkctl get migrations -n kube-system
 
 Do not continue until at least one Migration has started and succeeded.
 
-11. We will now failover the application to the second cluster. It is recommended that instead of failing cluster 1, we just suspend the MigrationSchedule to prevent any further migrations from taking place:
+11. We will now failover the application to the second cluster. This time we will fail the worker nodes in cluster 1:
 
 ```
-storkctl suspend migrationschedule dr-schedule -n kube-system
+ssh node-1-1 halt
+ssh node-1-2 halt
+ssh node-1-3 halt
 ```
 
-Check there are no migrations currently in progress, or wait until the last one has completed:
+**Do not shut down master-1** (etcd is running there).
 
-```
-storkctl get migrations -n kube-system
-```
-
-12. On cluster 2, show that the namespace and its contents have been migrated:
+12. The remaining commands will be executed on cluster 2. Show that the namespace and its contents have been migrated:
 
 ```
 kubectl get all,pvc -n petclinic
@@ -137,7 +136,33 @@ kubectl edit deploy -n petclinic
 
 Show that the `replicas` parameter has been set to `0` as part of the migration. Show that the original number of replicas has been saved in the `migrationReplicas` annotation.
 
-13. On cluster 2, scale up the application:
+13. Show that Portworx has lost quorum:
+
+```
+pxctl status
+storkctl get clusterdomainsstatus
+```
+
+First, the three worker nodes will show offline. Then the cluster will lose quorum and the whole cluster will be in red.
+
+14. Restore cluster quorum:
+
+```
+storkctl deactivate clusterdomain cluster-1
+```
+
+This tells the remaining nodes to restore quorum in the absence of the other half of the cluster. Mention that an alternative to this step is to maintain quorum with a witness in a third site, but this is optional.
+
+15. Show that Portworx has restored quorum:
+
+```
+pxctl status
+storkctl get clusterdomainsstatus
+```
+
+This may take a couple of minutes.
+
+16. Scale up the application:
 
 ```
 storkctl activate migration -n petclinic
@@ -145,7 +170,7 @@ storkctl activate migration -n petclinic
 
 Talk about how `storkctl` is going to find all the apps, ie Deployments, StatefulSets and operator-based applications, look for those annotations and then scale everything up to where they originally were.
 
-14. On cluster 2, show the pods starting:
+17. Show the pods starting:
 
 ```
 kubectl get pod -n petclinic
@@ -153,4 +178,4 @@ kubectl get pod -n petclinic
 
 It will take another minute or so to start.
 
-15. Refresh the browser tab for the second cluster. Click Find Owners and Find Owner and show the data is still there.
+18. Refresh the browser tab for the second cluster. Click Find Owners and Find Owner and show the data is still there.
