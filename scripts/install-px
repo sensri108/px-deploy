@@ -145,6 +145,7 @@ chmod +x /usr/local/bin/pxc-pxctl
 echo "alias pxctl='kubectl pxc pxctl'" >>/root/.bashrc
 kubectl-pxc config cluster set --portworx-service-namespace=portworx
 cp /assets/pxctl.sh /usr/local/bin/pxctl2
+chmod 755 /usr/local/bin/pxctl2
 
 # Wait for cluster readiness
 while ! kubectl get stc -A -n portworx | grep -q 'Running\|Online'; do
