@@ -1,2 +1,2 @@
 description: Deploys training clusters
-scripts: ["training"]
+scripts: ["wetty", "training"]
