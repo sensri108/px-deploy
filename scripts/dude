@@ -1,21 +1,32 @@
 install_backup() {
   NAMESPACE=central
-  VERSION=2.7.3
+  VERSION=2.8.4
   curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-$VERSION.tgz
   helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-namespace --version $VERSION --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-csi-db",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false,installCRDs=true
-  kubectl scale sts -n central pxc-backup-mongodb --replicas 1
-  kubectl scale sts -n central pxcentral-cortex-cassandra --replicas 1
-  kubectl patch svc px-backup-ui -n central -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30303, "port": 80, "protocol": "TCP", "targetPort": 8080 } ] } }'
   until (kubectl get po -n $NAMESPACE -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
   until (kubectl get po -n $NAMESPACE -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
-  BACKUP_POD_NAME=$(kubectl get pods -n central -l app=px-backup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-  kubectl cp -n central $BACKUP_POD_NAME:pxbackupctl/linux/pxbackupctl /usr/bin/pxbackupctl
+  # sometimes mongodb pods do not start. apply workaround if detected
+  echo "checking for statefulset pxc-backup-mongodb readiness"
+  while ! kubectl wait  --for=jsonpath='{.status.readyReplicas}'=3 sts/pxc-backup-mongodb -n central --timeout 180s; do
+      echo "statefulset mongodb not ready"
+      POD=$(kubectl get pods -n central -l app.kubernetes.io/component=pxc-backup-mongodb -ojson | jq -r '.items[] | select(.status.containerStatuses[].ready==false) | .metadata.name' | head -n1)
+      echo "deleting data dir in failed pod $POD"
+      kubectl exec $POD -n central -- rm -rf /bitnami/mongodb/data/db
+      echo "waiting for $POD to restart"
+  done
+  # enable pxmonitor & grafana (needs a running px-backup-ui IP/Port)
+  pubIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+  backupPort=$(kubectl get svc px-backup-ui -n $NAMESPACE -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+  kubectl delete job pxcentral-post-install-hook --namespace $NAMESPACE
+  helm upgrade px-central px-central-$VERSION.tgz --namespace $NAMESPACE --version $VERSION --reuse-values --set pxmonitor.enabled=true --set pxmonitor.pxCentralEndpoint=$pubIP:$backupPort
+  until (kubectl get po -n $NAMESPACE -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
+  BACKUP_POD_NAME=$(kubectl get pods -n $NAMESPACE -l app=px-backup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  kubectl cp -n $NAMESPACE $BACKUP_POD_NAME:pxbackupctl/linux/pxbackupctl /usr/bin/pxbackupctl
   chmod +x /usr/bin/pxbackupctl
+  kubectl patch svc px-backup-ui -n central -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30303, "port": 80, "protocol": "TCP", "targetPort": 8080 } ] } }'
   BACKUP_POD_IP=$(kubectl get pods -n central -l app=px-backup -o jsonpath='{.items[*].status.podIP}' 2>/dev/null)
   AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null)
   AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null)
-  pubIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
-  backupPort=$(kubectl get svc px-backup-ui -n central -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
   client_secret=$(kubectl get secret --namespace central pxc-backup-secret -o jsonpath={.data.OIDC_CLIENT_SECRET} | base64 --decode)
   pxbackupctl login -s http://$pubIP:$backupPort -u admin -p admin
   pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY -e $BACKUP_POD_IP:10002 --orgID default -n s3 -p aws
@@ -35,14 +46,8 @@ PX-Central admin user password: admin
 EOF
 }
 
-# Install editors and shellinabox on cluster 1
+# Configure users on cluster 1
 if [ $cluster -eq 1 ]; then
-  dnf install -y vim-enhanced nano
-  dnf install -y https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/s/shellinabox-2.20-5.el7.x86_64.rpm
-  rm -f /etc/securetty
-  sed -i s/4200/443/ /etc/sysconfig/shellinaboxd
-  systemctl enable shellinaboxd
-  systemctl restart shellinaboxd sshd
   mkdir /etc/skel/.kube /etc/skel/yaml
   cp /assets/petclinic/petclinic.yml /etc/skel/yaml
   cat <<EOF >>/etc/skel/.bashrc
@@ -66,7 +71,6 @@ while :; do
   [ $? -eq 22 ] && break
   sleep 2
 done
-
 
 export cluster
 if [ $[2*$[$cluster/2]] -eq $cluster ]; then
@@ -118,7 +122,7 @@ metadata:
   name: drpolicy
 policy:
   interval:
-    intervalMinutes: 1
+    intervalMinutes: 2
 ---
 apiVersion: stork.libopenstorage.org/v1alpha1
 kind: MigrationSchedule
