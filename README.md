@@ -2,6 +2,9 @@
 
 This will deploy one or more clusters in the cloud, with optional post-install tasks defined by template.
 
+> [!CAUTION]
+> The intended purpose of PX-Deploy is to provision demo and lab clusters as quickly as possible and then destroy them when the session is complete. Nothing should be considered suitable for production.
+
 # Supported platforms
 
 ## Container
