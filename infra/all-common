@@ -95,9 +95,10 @@ systemctl disable firewalld 2>/dev/null
 while ! yum update -y glib2; do
   sleep 1
 done
-while ! dnf install -y at bash-completion nfs-utils chrony unzip ca-certificates; do
+while ! dnf install -y at bash-completion nfs-utils chrony unzip ca-certificates netcat net-tools vim-enhanced nano git; do
   sleep 1
 done
+git config --global color.ui auto true
 systemctl enable --now atd chronyd
 [ "$stop_after" != 0 ] && echo /usr/sbin/poweroff | at now + $stop_after hours
 modprobe br_netfilter
