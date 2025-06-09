@@ -448,6 +448,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&flags.Azure_Tenant_Id, "azure_tenant_id", "", "", "Azure tenant ID (default "+defaults.Azure_Tenant_Id+")")
 	cmdCreate.Flags().StringVarP(&flags.Azure_Subscription_Id, "azure_subscription_id", "", "", "Azure subscription ID (default "+defaults.Azure_Subscription_Id+")")
 	cmdCreate.Flags().StringVarP(&flags.Azure_Disks, "azure_disks", "", "", "space-separated list of Azure disks to be attached to worker nodes, eg \"Standard_LRS:20 Premium_LRS:30\" (default "+defaults.Azure_Disks+")")
+	cmdCreate.Flags().StringVarP(&flags.Vsphere_Disks, "vsphere_disks", "", "", "space-separated list of size of px vsphere clouddrives to be attached to worker nodes, eg \"40 50\" (default "+defaults.Vsphere_Disks+")")
 	cmdCreate.Flags().StringVarP(&createTemplate, "template", "t", "", "name of template to be deployed")
 	cmdCreate.Flags().StringVarP(&createRegion, "region", "r", "", "AWS, GCP or Azure region (default "+defaults.Aws_Region+", "+defaults.Gcp_Region+" or "+defaults.Azure_Region+")")
 	cmdCreate.Flags().StringVarP(&flags.Cloud, "cloud", "C", "", "aws | gcp | azure | vsphere (default "+defaults.Cloud+")")
@@ -593,6 +594,10 @@ func validate_config(config *Config) []string {
 		config.Vsphere_Template = strings.TrimLeft(config.Vsphere_Template, "/")
 		config.Vsphere_Folder = strings.TrimLeft(config.Vsphere_Folder, "/")
 		config.Vsphere_Folder = strings.TrimRight(config.Vsphere_Folder, "/")
+		if !regexp.MustCompile(`^[0-9\ ]+$`).MatchString(config.Vsphere_Disks) {
+			errormsg = append(errormsg, "Invalid vsphere_disks option '"+config.Vsphere_Disks+"'")
+		}
+
 	}
 
 	if config.Platform != "k8s" && config.Platform != "none" && config.Platform != "ocp4" && config.Platform != "rancher" && config.Platform != "eks" && config.Platform != "gke" && config.Platform != "aks" {
