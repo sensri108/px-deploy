@@ -26,10 +26,11 @@ data:
   VSPHERE_USER: $VSPHERE_USER
   VSPHERE_PASSWORD: $VSPHERE_PASSWORD
 EOF
-  vsphere_suffix="vsp=true&ds=$vsphere_datastore&vc=$vsphere_host"
   for i in $vsphere_disks; do
-    vsphere_suffix="$vsphere_suffix&s=%22type=thin,size=$i%22&kd=type%3Dthin%2Csize%3D64"
+    vsphere_cd="$vsphere_cd%22type=thin,size=$i%22,"
   done
+  vsphere_cd=${vsphere_cd::-1}
+  vsphere_suffix="vsp=true&ds=$vsphere_datastore&vc=$vsphere_host&s=$vsphere_cd"
 fi
 
 k8s_version=$((kubectl version --short 2>&1 || kubectl version) | awk -Fv '/Server Version: / {print $3}')
