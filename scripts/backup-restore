@@ -3,7 +3,7 @@ kubectl apply -f /assets/minio/minio-deployment.yml
 kubectl apply -f /assets/petclinic/petclinic.yml
 
 # Setup Minio Endpoint
-ip=`curl -s https://ipinfo.io/ip`
+ip=$(get ip)
 sed -i -e 's/xxxx/'"$ip"'/g' /assets/backup-restore/backupLocation.yml
 
 # Setup Minio Bucket

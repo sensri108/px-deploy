@@ -24,3 +24,6 @@ curl -sL https://github.com/derailed/k9s/releases/download/v0.24.8/k9s_Linux_x86
 curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
 chmod 700 get_helm.sh
 HELM_INSTALL_DIR=/usr/bin ./get_helm.sh
+
+mv /assets/getip /usr/bin
+chmod 755 /usr/bin/getip
