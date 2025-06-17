@@ -1,7 +1,7 @@
 BACKUP_POD_IP=$(kubectl get pods -n central -l app=px-backup -o jsonpath='{.items[*].status.podIP}' 2>/dev/null)
 AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null)
 AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null)
-pubIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+pubIP=$(getip)
 backupPort=$(kubectl get svc px-backup-ui -n central -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
 client_secret=$(kubectl get secret --namespace central pxc-backup-secret -o jsonpath={.data.OIDC_CLIENT_SECRET} | base64 --decode)
 
