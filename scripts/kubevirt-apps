@@ -6,7 +6,8 @@ if [ "$platform" = ocp4 ]; then
     kubectl apply -f /assets/kubevirt/ocp/pxbbq-route.yml
 else
     kubectl patch svc pxbbq-svc -n pxbbq  --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
-    pubIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+    IMDSTOKEN=$(curl -s -X PUT 'http://169.254.169.254/latest/api/token' -H 'X-aws-ec2-metadata-token-ttl-seconds: 120')
+    pubIP=$(curl -H "X-aws-ec2-metadata-token: $IMDSTOKEN" -s http://169.254.169.254/latest/meta-data/public-ipv4)
     appPort=$(kubectl get svc pxbbq-svc -n pxbbq -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
     echo "Access PXBBQ on http://$pubIP:$appPort" >> /etc/motd
 fi
