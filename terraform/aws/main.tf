@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.50.0"
+      version = "5.99.1"
     }
     local = {
       source = "hashicorp/local"
@@ -312,6 +312,10 @@ resource "aws_instance" "node" {
 	  	volume_size				=	50
 	  	delete_on_termination 	= 	true
 		tags = merge({Name = format("%s.%s.%s.%s",var.name_prefix,var.config_name,each.key,"root")}, var.aws_tags)
+	}
+
+	metadata_options {
+		http_tokens = "required"
 	}
 	
 	dynamic "ebs_block_device"{
