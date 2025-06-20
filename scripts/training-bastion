@@ -20,6 +20,7 @@ stork_image=docker.io/$(curl -s https://install.portworx.com/$px_version/version
 container=$(docker create $stork_image)
 docker cp $container:/storkctl/linux/storkctl /usr/bin
 chmod 755 /usr/bin/storkctl
+docker rm $container
 
 # Install pxctl
 cp /assets/pxctl.sh /usr/bin
