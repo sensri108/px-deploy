@@ -1,2 +1,5 @@
 description: Deploys training clusters
-scripts: ["wetty", "training"]
+scripts: ["training-cluster"]
+cluster:
+  - id: 1
+    scripts: ["wetty", "ttysnoop", "training-bastion"]
