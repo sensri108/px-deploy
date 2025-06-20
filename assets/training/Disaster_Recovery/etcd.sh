@@ -1,6 +1,6 @@
 # Run an etcd container
 docker run -d --restart unless-stopped -v /usr/share/ca-certificates/:/etc/ssl/certs -p 2382:2382 \
- --name etcd quay.io/coreos/etcd:latest \
+ --name etcd quay.io/coreos/etcd:3.5.20 \
  /usr/local/bin/etcd \
  -name etcd0 \
  -auto-compaction-retention=3 -quota-backend-bytes=8589934592 \
