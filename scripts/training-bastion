@@ -14,3 +14,12 @@ for i in $(seq 1 $clusters); do
   passwd --stdin training$i <<<portworx
   chmod 755 /home/training$i
 done
+
+# Install storkctl
+stork_image=docker.io/$(curl -s https://install.portworx.com/$px_version/version?kbver=$k8s_version | awk '/stork/{print$2}')
+container=$(docker create $stork_image)
+docker cp $container:/storkctl/linux/storkctl /usr/bin
+chmod 755 /usr/bin/storkctl
+
+# Install pxctl
+cp /assets/pxctl.sh /usr/bin
