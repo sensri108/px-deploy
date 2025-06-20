@@ -30,10 +30,8 @@ chmod 755 /usr/bin/storkctl /usr/bin/pxctl
 # Collect kubeconfigs
 for i in $(seq 1 $clusters); do
   echo trying to copy kubeconfig from cluster $i
-  scp master-$i:.kube/config /home/training$i/.kube/config
-  [ $? -eq 0 ] && break
-  sleep 2
+  while ! scp master-$i:.kube/config /home/training$i/.kube/config; do
+    sleep 2
+  done
+  chown training$i.training$i /home/training$i/.kube/config
 done
-
-
-# Create Portworx specs
