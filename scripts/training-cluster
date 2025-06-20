@@ -6,12 +6,12 @@ while :; do
   sleep 2
 done
 
-# Create training user on worker nodes
+# Create training user and update PS1 on worker nodes
 for i in $(seq 1 $nodes); do
   while :; do
+    echo "PS1='\e[0;33m[\u@px-training \W]\$ \e[m'" | ssh node-$cluster-$i "cat >>/etc/skel/.bashrc"
     ssh node-$cluster-$i "useradd training$cluster && passwd --stdin training$cluster <<<portworx && exit 22"
     [ $? -eq 22 ] && break
     sleep 2
   done
 done
-
