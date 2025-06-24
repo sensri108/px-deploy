@@ -309,6 +309,7 @@ resource "aws_instance" "node" {
 	key_name 					= 	aws_key_pair.deploy_key.key_name
 	
 	root_block_device {
+		encrypted               =   true
 	  	volume_size				=	50
 	  	delete_on_termination 	= 	true
 		tags = merge({Name = format("%s.%s.%s.%s",var.name_prefix,var.config_name,each.key,"root")}, var.aws_tags)
@@ -321,6 +322,7 @@ resource "aws_instance" "node" {
 	dynamic "ebs_block_device"{
     	for_each 				= each.value.blockdisks
     	content {
+			encrypted           = true
       		volume_type 		= ebs_block_device.value.ebs_type
       		volume_size 		= ebs_block_device.value.ebs_size
 			tags = merge({Name = format("%s.%s.%s.%s",var.name_prefix,var.config_name,each.key,"root")}, var.aws_tags)
