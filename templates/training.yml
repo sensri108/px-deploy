@@ -1,6 +1,6 @@
 description: Deploys training clusters
 scripts: ["training-cluster"]
-px_version: 3.2.3
+px_version: 3.3.0
 k8s_version: 1.31.8
 cluster:
   - id: 1
