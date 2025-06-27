@@ -210,6 +210,7 @@ func aws_connect_ec2(awscfg *aws.Config) *ec2.Client {
 	return client
 }
 
+// returns an array of instance IDs
 func aws_get_instances(config *Config, client *ec2.Client) ([]string, error) {
 	var aws_instances []string
 
@@ -594,6 +595,32 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 			time.Sleep(5 * time.Second)
 		}
 	}
+}
+
+func start_ec2_instances(client *ec2.Client, instanceIDs []string) {
+	_, err := client.StartInstances(context.TODO(), &ec2.StartInstancesInput{
+		InstanceIds: instanceIDs,
+	})
+
+	if err != nil {
+		fmt.Printf("error starting ec2 instances %s \n", instanceIDs)
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("Starting %d instances\n", len(instanceIDs))
+}
+
+func stop_ec2_instances(client *ec2.Client, instanceIDs []string) {
+	_, err := client.StopInstances(context.TODO(), &ec2.StopInstancesInput{
+		InstanceIds: instanceIDs,
+	})
+
+	if err != nil {
+		fmt.Printf("error stopping ec2 instances %s \n", instanceIDs)
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("Stopping %d instances\n", len(instanceIDs))
 }
 
 func terminate_ec2_instances(client *ec2.Client, instanceIDs []string) {
