@@ -146,7 +146,7 @@ var testingName, testingTemplate string
 var wg sync.WaitGroup
 
 func main() {
-	var createName, createTemplate, createRegion, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
+	var createName, createTemplate, createRegion, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber, stopName, startName string
 	var destroyAll, destroyClear, destroyForce bool
 	var flags Config
 	os.Chdir("/px-deploy/.px-deploy")
@@ -259,6 +259,64 @@ func main() {
 				command = args[0]
 			}
 			syscall.Exec("/usr/bin/ssh", []string{"ssh", "-oLoglevel=ERROR", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, command}, os.Environ())
+		},
+	}
+
+	cmdStop := &cobra.Command{
+		Use:   "stop -n name",
+		Short: "Stops a deployment",
+		Long:  "Stops all of the instances in a deployment",
+		Run: func(cmd *cobra.Command, args []string) {
+			config := parse_yaml("deployments/" + stopName + ".yml")
+			if config.Cloud == "aws" {
+				if config.Platform == "ocp4" || config.Platform == "eks" {
+					panic("Stop not supported for " + config.Platform)
+				}
+				defaultConfig := parse_yaml("/px-deploy/.px-deploy/defaults.yml")
+				config.Aws_Access_Key_Id = defaultConfig.Aws_Access_Key_Id
+				config.Aws_Secret_Access_Key = defaultConfig.Aws_Secret_Access_Key
+		
+				cfg := aws_load_config(&config)
+				client := aws_connect_ec2(&cfg)
+		
+				aws_instances, err := aws_get_instances(&config, client)
+				if err != nil {
+					panic(fmt.Sprintf("error listing aws instances %v \n", err.Error()))
+				}
+				stop_ec2_instances(client, aws_instances)
+				//fmt.Printf("%v", aws_instances)
+			} else {
+				panic("Stop only supported on AWS")
+			}
+		},
+	}
+
+	cmdStart := &cobra.Command{
+		Use:   "start -n name",
+		Short: "Starts a deployment",
+		Long:  "Starts all of the instances in a deployment",
+		Run: func(cmd *cobra.Command, args []string) {
+			config := parse_yaml("deployments/" + startName + ".yml")
+			if config.Cloud == "aws" {
+				if config.Platform == "ocp4" || config.Platform == "eks" {
+					panic("Start not supported for " + config.Platform)
+				}
+				defaultConfig := parse_yaml("/px-deploy/.px-deploy/defaults.yml")
+				config.Aws_Access_Key_Id = defaultConfig.Aws_Access_Key_Id
+				config.Aws_Secret_Access_Key = defaultConfig.Aws_Secret_Access_Key
+		
+				cfg := aws_load_config(&config)
+				client := aws_connect_ec2(&cfg)
+		
+				aws_instances, err := aws_get_instances(&config, client)
+				if err != nil {
+					panic(fmt.Sprintf("error listing aws instances %v \n", err.Error()))
+				}
+				start_ec2_instances(client, aws_instances)
+				//fmt.Printf("%v", aws_instances)
+			} else {
+				panic("Stop only supported on AWS")
+			}
 		},
 	}
 
@@ -466,6 +524,12 @@ func main() {
 
 	cmdConnect.Flags().StringVarP(&connectName, "name", "n", "", "name of deployment to connect to")
 	cmdConnect.MarkFlagRequired("name")
+
+	cmdStop.Flags().StringVarP(&stopName, "name", "n", "", "name of deployment to stop")
+	cmdStop.MarkFlagRequired("name")
+	cmdStart.Flags().StringVarP(&startName, "name", "n", "", "name of deployment to start")
+	cmdStart.MarkFlagRequired("name")
+
 	cmdKubeconfig.Flags().StringVarP(&kubeconfigName, "name", "n", "", "name of deployment to connect to")
 	cmdKubeconfig.MarkFlagRequired("name")
 
@@ -485,7 +549,7 @@ func main() {
 
 	cmdHistory.Flags().StringVarP(&historyNumber, "number", "n", "", "deployment ID")
 
-	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdTesting, cmdKubeconfig, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVsphereCheckTemplateVersion, cmdVersion, cmdHistory, cmdUnlock)
+	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdTesting, cmdKubeconfig, cmdList, cmdTemplates, cmdStop, cmdStart, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVsphereCheckTemplateVersion, cmdVersion, cmdHistory, cmdUnlock)
 	rootCmd.Execute()
 }
 

@@ -91,6 +91,16 @@ Execute a command:
 px-deploy connect --name my-deployment "storkctl get clusterpair"
 ```
 
+Stop instances (to reduce AWS costs):
+```
+px-deploy stop --name my-deployment
+```
+
+Start instances:
+```
+px-deploy start --name my-deployment
+```
+
 Tear down the deployment:
 ```
 px-deploy destroy --name my-deployment
