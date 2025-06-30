@@ -9,8 +9,8 @@ alias k=kubectl
 complete -F __start_kubectl k
 PS1='\e[0;33m[\u@px-training \W]\$ \e[m'
 EOF
-curl -o /etc/skel/training/px-operator.yml "https://install.portworx.com/$px_version?comp=pxoperator&kbver=$k8s_version&ns=portworx"
-curl "https://install.portworx.com/$px_version?operator=true&mc=false&kbver=$k8s_version&ns=portworx&b=true&s=%2Fdev%2Fnvme1n1&c=px-cluster&stork=true&csi=true&mon=true&tel=true&st=k8s&promop=true" | grep -v install.portworx.com >/etc/skel/training/px.yml
+curl -o /etc/skel/training/03-Installation/px-operator.yml "https://install.portworx.com/$px_version?comp=pxoperator&kbver=$k8s_version&ns=portworx"
+curl "https://install.portworx.com/$px_version?operator=true&mc=false&kbver=$k8s_version&ns=portworx&b=true&s=%2Fdev%2Fnvme1n1&c=px-cluster&stork=true&csi=true&mon=true&tel=true&st=k8s&promop=true" | grep -v install.portworx.com >/etc/skel/training/03-Installation/px.yml
 
 # Create training users
 for i in $(seq 1 $clusters); do
