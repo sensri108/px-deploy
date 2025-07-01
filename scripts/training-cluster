@@ -7,3 +7,6 @@ for i in $(seq 1 $nodes); do
     sleep 2
   done
 done
+
+# Provision MinIO
+kubectl apply -f /assets/minio/minio-deployment.yml
