@@ -6,3 +6,5 @@ metadata:
 spec:
   backupName: <INSERT NAME OF BACKUP>
   backupLocation: minio
+  namespaceMapping:
+    backup-lab: backup-lab
