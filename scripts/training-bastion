@@ -33,5 +33,13 @@ for i in $(seq 1 $clusters); do
   while ! scp master-$i:.kube/config /home/training$i/.kube/config; do
     sleep 2
   done
-  chown training$i.training$i /home/training$i/.kube/config
+  cp /root/.kube/config /home/training$i/training/kubeconfig.target
+  chown training$i.training$i /home/training$i/.kube/config /home/training$i/training/kubeconfig.target
 done
+
+# Install Portworx on cluster 1
+kubectl apply -f /home/training1/training/03-Installation/px-operator.yml
+while ! kubectl wait --for=condition=ready pod -lname=portworx-operator -n portworx; do
+  sleep 2
+done
+kubectl apply -f /home/training1/training/03-Installation/px.yml
