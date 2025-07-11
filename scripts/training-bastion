@@ -42,4 +42,6 @@ kubectl apply -f /home/training1/training/03-Installation/px-operator.yml
 while ! kubectl wait --for=condition=ready pod -lname=portworx-operator -n portworx; do
   sleep 2
 done
-kubectl apply -f /home/training1/training/03-Installation/px.yml
+while ! kubectl apply -f /home/training1/training/03-Installation/px.yml; do
+  sleep 2
+done
