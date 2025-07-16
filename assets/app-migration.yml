@@ -10,5 +10,6 @@ spec:
   namespaces:
   - pxbbq
   - petclinic
+  - default
 
 
