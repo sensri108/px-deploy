@@ -112,6 +112,60 @@ resource "aws_subnet" "subnet" {
 		}
 }
 
+data "aws_caller_identity" "current" {}
+
+resource "aws_vpc_endpoint" "guardduty" {
+  vpc_id            = aws_vpc.vpc.id
+  service_name      = format("com.amazonaws.%s.guardduty-data",var.aws_region)
+  vpc_endpoint_type = "Interface"
+  
+  subnet_ids = [
+    aws_subnet.subnet[0].id
+  ]
+
+  security_group_ids = [
+    aws_security_group.guardduty.id
+  ]
+
+  private_dns_enabled = true
+
+  policy = jsonencode({
+	Version = "2012-10-17"
+	Statement= [{
+			Action= "*",
+			Resource= "*",
+			Effect= "Allow",
+			Principal= "*"
+		},
+		{
+			Condition= {StringNotEquals= {"aws:PrincipalAccount": "${data.aws_caller_identity.current.account_id}"}}
+			Action= "*",
+			Resource= "*",
+			Effect= "Deny",
+			Principal= "*"
+		}
+	]
+})
+}
+
+resource "aws_security_group" "guardduty" {
+	name 		= 	format("pxd-gd-%s",var.config_name)
+	description = 	"Security group for guardduty"
+	vpc_id = aws_vpc.vpc.id
+	
+   	ingress {
+		description = "https"
+		from_port 	= 443
+		to_port 	= 443
+		protocol	= "tcp"
+		cidr_blocks = [var.aws_cidr_vpc]
+		}
+    tags = {
+		Name=format("pxd-gd-%s",var.config_name)
+		}
+}
+
+
 resource "aws_internet_gateway" "igw" {
 	vpc_id = aws_vpc.vpc.id
 	tags = {
