@@ -1,4 +1,4 @@
-if [ $platform != eks ] && [ $platform != gke ] && [ $platform != ocp4 ] && [ $platform != rancher ] && [ $platform != aks ]; then
+if [ $cloud = aws ] && [ $platform != eks ] && [ $platform != ocp4 ]; then
     IMDSTOKEN=$(curl -s -X PUT 'http://169.254.169.254/latest/api/token' -H 'X-aws-ec2-metadata-token-ttl-seconds: 120')
     region=$(curl -H "X-aws-ec2-metadata-token: $IMDSTOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
     aws configure set default.region $region
