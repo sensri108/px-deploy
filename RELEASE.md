@@ -1,3 +1,11 @@
+# 6.4.5
+
+## Fixes
+* add tf-managed AWS GuardDuty endpoint
+* enforce AWS imdsv2
+* re-work training
+* fix minor issues
+
 # 6.4.4
 
 ## Improvements
