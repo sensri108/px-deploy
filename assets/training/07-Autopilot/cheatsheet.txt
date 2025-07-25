@@ -1,0 +1,7 @@
+watch kubectl get events --field-selector involvedObject.kind=AutopilotRule --sort-by .lastTimestamp
+
+watch --color pxctl volume inspect <volume>
+
+kubectl exec $POD -n autopilot-lab -- createdb pxdemo
+
+kubectl exec $POD -n autopilot-lab -- pgbench -i -s 50 pxdemo

@@ -2,14 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
+  namespace: postgres
   labels:
     app: postgres
 spec:
-  strategy:
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 1
-    type: RollingUpdate
   replicas: 1
   selector:
     matchLabels:
@@ -19,24 +15,16 @@ spec:
       labels:
         app: postgres
     spec:
-      schedulerName: stork
       containers:
       - name: postgres
-        image: postgres:9.5
-        imagePullPolicy: "IfNotPresent"
+        image: postgres:17.5
         ports:
         - containerPort: 5432
         env:
-        - name: POSTGRES_USER
-          value: pgbench
         - name: PGUSER
-          value: pgbench
+          value: postgres
         - name: POSTGRES_PASSWORD
-          value: superpostgres
-        - name: PGBENCH_PASSWORD
-          value: superpostgres
-        - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
+          value: password
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: postgres-data
