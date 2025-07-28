@@ -705,7 +705,7 @@ func aws_show_iamkey_age(config *Config) {
 	}
 
 	for _, iamKey := range iamKeys.AccessKeyMetadata {
-		if iamKey.Status == "Active" {
+		if iamKey.Status == "Active" && *iamKey.AccessKeyId == config.Aws_Access_Key_Id {
 			duration := time.Since(*iamKey.CreateDate)
 			if math.Floor(duration.Hours()/24) > 70 {
 				fmt.Printf("%sHint: your AWS IAM access key %s is older than 70 days (%.0f)\n%s", Yellow, *iamKey.AccessKeyId, math.Floor(duration.Hours()/24), Reset)
