@@ -6,4 +6,4 @@ spec:
   claimPropertySets:
     - accessModes:
       - ReadWriteMany
-      volumeMode: Filesystem
+      volumeMode: Block
