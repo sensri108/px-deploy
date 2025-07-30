@@ -13,6 +13,7 @@ spec:
     http:
       url: "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img"
   pvc:
+    volumeMode: Block
     storageClassName: px-rwx-kubevirt
     accessModes:
       - ReadWriteMany
