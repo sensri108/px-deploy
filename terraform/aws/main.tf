@@ -372,6 +372,10 @@ resource "aws_instance" "node" {
 	metadata_options {
 		http_tokens = "required"
 	}
+
+	timeouts {
+		delete = "30m"
+	}
 	
 	dynamic "ebs_block_device"{
     	for_each 				= each.value.blockdisks
