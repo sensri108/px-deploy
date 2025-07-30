@@ -44,6 +44,10 @@ while ! kubectl wait cdis.cdi.kubevirt.io cdi -n cdi  --for=jsonpath='{.status.p
   sleep 2
 done
 
+echo "waiting for kubevirt api readiness"
+while ! kubectl wait pods -n kubevirt -l kubevirt.io=virt-api --for=condition=Ready --timeout=300s; do
+  sleep 2
+done
 
 #kubectl apply -f /assets/kubevirt/px-virt-sc.yml
 
