@@ -62,7 +62,7 @@ cat <<EOF >./tmp/vsphere-rocky.json
     "vm-cpu-num": "4",
     "vm-mem-size": "8192",
     "vm-disk-size": "52000",
-    "iso_url": "https://dl.rockylinux.org/vault/rocky/9.4/isos/x86_64/Rocky-9.4-x86_64-minimal.iso",
+    "iso_url": "https://dl.rockylinux.org/vault/rocky/9.5/isos/x86_64/Rocky-9.5-x86_64-minimal.iso",
     "kickstart_file": "/vsphere-ks.cfg"
   },
   "builders": [
@@ -98,7 +98,7 @@ cat <<EOF >./tmp/vsphere-rocky.json
       "guest_os_type": "rhel8_64Guest",
       "vm_version": "14",
       "insecure_connection": "true",
-      "iso_checksum": "sha256:ee3ac97fdffab58652421941599902012179c37535aece76824673105169c4a2",
+      "iso_checksum": "sha256:eedbdc2875c32c7f00e70fc861edef48587c7cbfd106885af80bdf434543820b",
       "iso_url": "{{user \`iso_url\`}}",
       "cd_files": ["./vsphere-ks.cfg"],
       "cd_label": "kickstart",
@@ -138,8 +138,8 @@ cat <<EOF >./tmp/vsphere-rocky.json
 EOF
 
 cat <<EOF >./tmp/vsphere-ks.cfg
-repo --name=BaseOS --baseurl=https://dl.rockylinux.org/vault/rocky/9.4/BaseOS/x86_64/os/
-repo --name=AppStream --baseurl=https://dl.rockylinux.org/vault/rocky/9.4/AppStream/x86_64/os/
+repo --name=BaseOS --baseurl=https://dl.rockylinux.org/vault/rocky/9.5/BaseOS/x86_64/os/
+repo --name=AppStream --baseurl=https://dl.rockylinux.org/vault/rocky/9.5/AppStream/x86_64/os/
 text
 firstboot --enable
 ignoredisk --only-use=sda
@@ -210,18 +210,18 @@ if [ $? != 0 ]; then
 fi
 
 echo "3. copy ova to s3"
-aws s3 cp template.ova s3://$S3_BUCKET/templates/template.ova
+aws s3 cp template.ova s3://$S3_BUCKET/templates/template_r95.ova
 if [ $? != 0 ]; then
   echo "s3 template upload failed"
   exit
 fi
 
-echo "4. copy pxdid.txt to s3"
-aws s3 cp pxdid.txt s3://$S3_BUCKET/templates/pxdid.txt
-if [ $? != 0 ]; then
-  echo "s3 pxdid.txt upload failed"
-  exit
-fi
+#echo "4. copy pxdid.txt to s3"
+#aws s3 cp pxdid.txt s3://$S3_BUCKET/templates/pxdid.txt
+#if [ $? != 0 ]; then
+#  echo "s3 pxdid.txt upload failed"
+#  exit
+#fi
 
 cd ..
 rm -rf tmp

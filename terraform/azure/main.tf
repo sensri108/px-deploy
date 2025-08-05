@@ -290,8 +290,8 @@ resource "azurerm_linux_virtual_machine" "node" {
   }
 
 // when changing dont forget to update information how to accept eula
-// e.g. 'az vm image terms accept --urn "resf:rockylinux-x86_64:9-base:9.3.20231113"'
-// resf:rockylinux-x86_64:9-base:9.5.20241118
+// e.g. 'az vm image terms accept --urn "resf:rockylinux-x86_64:9-base:9.5.20241118"'
+
   plan {
     name = "9-base"
     publisher = "resf"
