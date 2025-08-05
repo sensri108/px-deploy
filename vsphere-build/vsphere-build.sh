@@ -182,6 +182,7 @@ python3-pip
 %end
 
 %post
+echo "exclude=kernel*" >>/etc/yum.conf
 systemctl enable vmtoolsd
 systemctl start vmtoolsd
 dnf -y install epel-release
