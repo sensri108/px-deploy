@@ -275,10 +275,10 @@ func main() {
 				defaultConfig := parse_yaml("/px-deploy/.px-deploy/defaults.yml")
 				config.Aws_Access_Key_Id = defaultConfig.Aws_Access_Key_Id
 				config.Aws_Secret_Access_Key = defaultConfig.Aws_Secret_Access_Key
-		
+
 				cfg := aws_load_config(&config)
 				client := aws_connect_ec2(&cfg)
-		
+
 				aws_instances, err := aws_get_instances(&config, client)
 				if err != nil {
 					panic(fmt.Sprintf("error listing aws instances %v \n", err.Error()))
@@ -304,10 +304,10 @@ func main() {
 				defaultConfig := parse_yaml("/px-deploy/.px-deploy/defaults.yml")
 				config.Aws_Access_Key_Id = defaultConfig.Aws_Access_Key_Id
 				config.Aws_Secret_Access_Key = defaultConfig.Aws_Secret_Access_Key
-		
+
 				cfg := aws_load_config(&config)
 				client := aws_connect_ec2(&cfg)
-		
+
 				aws_instances, err := aws_get_instances(&config, client)
 				if err != nil {
 					panic(fmt.Sprintf("error listing aws instances %v \n", err.Error()))
@@ -491,6 +491,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&flags.Stop_After, "stop_after", "s", "", "Stop instances after this many hours (default "+defaults.Stop_After+")")
 	cmdCreate.Flags().StringVarP(&flags.Aws_Type, "aws_type", "", "", "AWS type for each node (default "+defaults.Aws_Type+")")
 	cmdCreate.Flags().StringVarP(&flags.Aws_Ebs, "aws_ebs", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\" (default "+defaults.Aws_Ebs+")")
+	cmdCreate.Flags().StringVarP(&flags.Aws_Region, "aws_region", "", "", "AWS Region (default "+defaults.Aws_Region+")")
 	cmdCreate.Flags().StringVarP(&flags.Aws_Access_Key_Id, "aws_access_key_id", "", "", "your AWS API access key id (default \""+defaults.Aws_Access_Key_Id+"\")")
 	cmdCreate.Flags().StringVarP(&flags.Aws_Secret_Access_Key, "aws_secret_access_key", "", "", "your AWS API secret access key (default \""+defaults.Aws_Secret_Access_Key+"\")")
 	cmdCreate.Flags().StringVarP(&flags.Tags, "tags", "", "", "comma-separated list of tags to be applies to cloud nodes, eg \"Owner=Bob,Purpose=Demo\"")

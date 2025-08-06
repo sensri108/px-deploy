@@ -49,13 +49,15 @@ data "aws_availability_zones" "available" {
         }
 }
 
+# how to find it: aws ec2 describe-images  --owners 679593333241 --filters Name=architecture,Values=x86_64 Name=name,Values="Rocky-9*" Name=root-device-type,Values=ebs
+# check for availability in different aws regions!
 data "aws_ami" "rocky" {
   owners = ["679593333241"]
   include_deprecated = true  
   most_recent = true
   filter {
     name   = "name"
-    values = ["Rocky-8-ec2-8.6-20220515.0.x86_64-d6577ceb-8ea8-4e0e-84c6-f098fc302e82"]
+    values = ["Rocky-9-EC2-Base-9.5-20241118.0.x86_64-3f230a17-9877-4b16-aa5e-b1ff34ab206b"]
   }
    
   filter {
