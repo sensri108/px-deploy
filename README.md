@@ -47,7 +47,7 @@ It may take 5-10 minutes to complete, longer with a slow Internet connection.
 
 Update your `.bash_profile` or `.zshrc` as directed. Source them or login again. Validate it is complete with `px-deploy -h`.
 
-Install the optional [cron job](blob/master/docs/cron.md).
+Install the optional [cron job](https://github.com/PureStorage-OpenConnect/px-deploy/blob/master/docs/cron.md).
 
 Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
