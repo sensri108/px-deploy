@@ -97,6 +97,7 @@ func aws_create_variables(config *Config) []string {
 	case "ocp4":
 		{
 			tf_variables = append(tf_variables, "ocp4_domain = \""+config.Ocp4_Domain+"\"")
+			tf_variables = append(tf_variables, "ocp4_credentials_mode = \""+config.Ocp4_Credentials_Mode+"\"")
 			tf_variables = append(tf_variables, "ocp4_pull_secret = \""+base64.StdEncoding.EncodeToString([]byte(config.Ocp4_Pull_Secret))+"\"")
 			tf_variables_ocp4 = append(tf_variables_ocp4, "ocp4clusters = {")
 		}
