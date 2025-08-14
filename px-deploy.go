@@ -573,7 +573,6 @@ func validate_config(config *Config) []string {
 			}
 		}
 
-		fmt.Printf("credmode '%s'\n", config.Ocp4_Credentials_Mode)
 		if (config.Ocp4_Credentials_Mode != "Mint") && (config.Ocp4_Credentials_Mode != "Passthrough") {
 			config.Ocp4_Credentials_Mode = "Mint"
 		}
