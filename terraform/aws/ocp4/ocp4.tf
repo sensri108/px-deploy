@@ -3,6 +3,11 @@ variable "ocp4_domain" {
 	type 		= string
 }
 
+variable "ocp4_credentials_mode" {
+	description = "credentials mode used for ocp4 cluster"
+	type 		= string
+}
+
 variable "ocp4_nodes" {
 	description = "number of worker nodes"
 	type 		= number
@@ -162,6 +167,7 @@ resource "local_file" "ocp4-install-config" {
                         tpl_aws_region  = var.aws_region
                         tpl_aws_iamrole = aws_iam_role.node-iam-role.name
                         tpl_ocp4domain  = var.ocp4_domain
+                        tpl_ocp4_credentials_mode = var.ocp4_credentials_mode
                         tpl_ocp4pullsecret = base64decode(var.ocp4_pull_secret)
                         tpl_cluster     = each.key
                         tpl_awstype     = each.value

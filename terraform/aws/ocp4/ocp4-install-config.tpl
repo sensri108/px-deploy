@@ -1,5 +1,6 @@
 apiVersion: v1
 baseDomain: ${tpl_ocp4domain}
+credentialsMode: ${tpl_ocp4_credentials_mode}
 compute:
 - hyperthreading: Enabled
   name: worker

@@ -102,6 +102,7 @@ type Config struct {
 	Ocp4_Version             string
 	Ocp4_Pull_Secret         string
 	Ocp4_Domain              string
+	Ocp4_Credentials_Mode    string
 	Aws__Vpc                 string `yaml:"aws__vpc,omitempty"`
 	Gcp__Vpc                 string `yaml:"gcp__vpc,omitempty"`
 	Aws__Sg                  string `yaml:"aws__sg,omitempty"`
@@ -727,8 +728,8 @@ func validate_config(config *Config) []string {
 	}
 
 	if config.Platform == "ocp4" {
-		checkvar := []string{"ocp4_domain", "ocp4_pull_secret"}
-		emptyVars := isEmpty(config.Ocp4_Domain, config.Ocp4_Pull_Secret)
+		checkvar := []string{"ocp4_domain", "ocp4_pull_secret", "ocp4_credentials_mode"}
+		emptyVars := isEmpty(config.Ocp4_Domain, config.Ocp4_Pull_Secret, config.Ocp4_Credentials_Mode)
 		if len(emptyVars) > 0 {
 			for _, i := range emptyVars {
 				errormsg = append(errormsg, fmt.Sprintf("please set \"%s\" in defaults.yml", checkvar[i]))
