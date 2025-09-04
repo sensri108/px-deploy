@@ -145,29 +145,23 @@ while ! kubectl get stc -A -n portworx | grep -q 'Running\|Online'; do
   sleep 3
 done
 
-# Install Grafana and OCP console plugin
+# If OCP, enabled console plugin and Prometheus
 if [ $platform = ocp4 ]; then
+  kubectl patch StorageCluster px-deploy-$cluster -n portworx --type merge --patch '{"spec": {"monitoring": {"prometheus": {"enabled": true}}}}'
   kubectl patch console.operator cluster --type json -p '[{"op": "add", "path": "/spec/plugins/-", "value": "portworx"}]'
-  kubectl patch StorageCluster px-deploy-$cluster -n portworx --type merge --patch '{"spec": {"monitoring": {"prometheus": {"alertManager": {"enabled": false}}}}}'
-  kubectl patch StorageCluster px-deploy-$cluster -n portworx --type merge --patch '{"spec": {"monitoring": {"prometheus": {"enabled": false}}}}'
-  kubectl apply -n portworx -f https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-service-account.yaml
-  oc -n portworx adm policy add-cluster-role-to-user cluster-monitoring-view -z grafana
-  TOKEN=$(oc -n portworx create token grafana --duration=8760h)
-  THANOS=$(oc get route thanos-querier -n openshift-monitoring -o json | jq -r '.spec.host')
-  kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource-ocp.yaml=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-datasource-ocp.yaml | sed "s/<THANOS_QUERIER_HOST>/$THANOS/;s/<BEARER_TOKEN>/$TOKEN/g")
-  kubectl apply -n portworx -f https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-ocp.yaml
-  kubectl -n portworx create configmap grafana-dashboard-config --from-file=grafana-dashboard-config.yaml=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-dashboard-config.yaml)
-  kubectl -n portworx create configmap grafana-dashboards --from-file=portworx-cluster-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-cluster-dashboard.json) --from-file=portworx-node-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-node-dashboard.json) --from-file=portworx-volume-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-volume-dashboard.json) --from-file=portworx-etcd-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-etcd-dashboard.json) --from-file=portworx-performance-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-performance-dashboard.json)
-else
-  kubectl patch StorageCluster px-deploy-$cluster -n portworx --type merge --patch '{"spec": {"monitoring": {"grafana": {"enabled": true}}}}'
 fi
+
+# Install Grafana
+kubectl patch StorageCluster px-deploy-$cluster -n portworx --type merge --patch '{"spec": {"monitoring": {"grafana": {"enabled": true}}}}'
 if [ $platform = k8s ]; then
   kubectl create service nodeport grafana -n portworx --tcp=3000:3000 --node-port 30112
+elif [ $platform = ocp4 ]; then
+  while ! oc expose service px-grafana -n portworx; do
+    echo waiting for px-grafana service
+    sleep 1
+    kubectl patch StorageCluster px-deploy-$cluster -n portworx --type merge --patch '{"spec": {"monitoring": {"grafana": {"enabled": true}}}}'
+  done
 fi
-while ! curl -s -X PUT -H "Content-Type: application/json" -d '{"oldPassword":"admin","newPassword":"admin","confirmNew":"admin"}' http://admin:admin@localhost:30112/api/user/password; do
-  echo waiting for grafana
-  sleep 2
-done
 
 # install storkctl
 STORK_POD=$(kubectl get pods -n portworx -l name=stork -o jsonpath='{.items[0].metadata.name}')
