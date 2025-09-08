@@ -15,9 +15,10 @@ deployments=$(wc -w <<<$files | tr -d " ")
 [ $deployments = 0 ] && exit 0
 eks=$(grep "platform: eks" $files | wc -l | tr -d " ")
 ocp4=$(grep "platform: ocp4" $files | wc -l | tr -d " ")
-clusters=$(awk -F \" '/clusters:/ {sum+=$2} END {print sum}' $files)
-nodes=$(awk -F \" '/nodes:/ {sum+=$2} END {print sum}' $files)
-nodes=$[$nodes+$clusters]
+clusters=$(awk -F \" '/^clusters:/ {sum+=$2} END {print sum}' $files)
+for f in $files; do
+  nodes=$[$nodes+$(awk -F \" '/^nodes:/ {n=$2+1} /^clusters:/ {c=$2} END {print n*c}' $f)]
+done
 cost=$(bc <<< "scale=2; $nodes*1.92")
 
 # Generate a message
