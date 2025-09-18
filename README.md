@@ -126,19 +126,19 @@ async-dr                     Deploys 2 clusters with Portworx, sets up and confi
                              configures an async DR schedule with a loadbalancer in front of the setup.
 backup-restore               Deploys a Kubernetes cluster, Minio S3 storage, Petclinic Application and
                              Backup/Restore config
-elk                          Deploys an ELK stack of 3 master nodes, 3 data nodes and 2 coordinator nodes, as per
-                             https://docs.portworx.com/portworx-install-with-kubernetes/application-install-with-kubernetes/elastic-search-and-kibana/
-harbor                       Deploys a single K8s cluster with Portworx and Harbor (https://goharbor.io/)
+ceph                         Install and run Ceph on each cluster
+dude                         Deploys clusters with Portworx, sets up and configures a cluster pairing from
+                             odd to even clusters, configures an async DR schedule, installs PX-Backup on the
+                             last cluster
+eks-multicloud-target        setup EKS cluster with PX as clusterpair migration target
+kubevirt                     Install kubevirt on a bare-metal cluster
 metro                        Deploys 2 K8s clusters in AWS with a stretched Portworx cluster. It configures
                              Metro, a GUI and Petclinic, ready for a manual failover demo
 migration                    Deploys 2 clusters with Portworx, sets up and configures a cluster pairing, and
                              deploys a set of apps and a migration template.
+ocp-kubevirt                 Two Cluster OCP Virtualization Demo with Backup & AsyncDR on a aws bare-metal
 px-backup                    A single Kubernetes cluster with Portworx and PX-Backup via Helm installed
-px-fio-example               An example fio benchmark on a gp2 disk and a Portworx volume on a gp2 disk
-px-vs-storageos-fio-example  An example fio benchmark on a gp2 disk, a Portworx volume on a gp2 disk, and a
-                             StorageOS volume on a gp2 disk
 px                           A single Kubernetes cluster with Portworx installed
-storageos                    A single Kubernetes cluster with StorageOS installed
 training                     Deploys training clusters
 ```
 
