@@ -1,6 +1,6 @@
 # Configure user directories
 mv /assets/training /etc/skel
-mkdir /etc/skel/.kube /etc/skel/training/03-Installation
+mkdir /etc/skel/.kube
 cat <<EOF >>/etc/skel/.bashrc
 alias k=kubectl
 complete -F __start_kubectl k
