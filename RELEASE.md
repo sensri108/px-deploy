@@ -1,3 +1,13 @@
+# 6.5
+
+##Fixes
+ * Fix multiple AWS key warning display
+
+##Improvements
+ * Add cronjob for monitoring AWS costs
+ * Simplify pxctl script
+ * Simplify Grafana deployment
+
 # 6.4.5
 
 ## Fixes
