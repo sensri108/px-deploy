@@ -87,6 +87,7 @@ elif [ $cloud = "vsphere" ]; then
   cat /tmp/hosts >>/etc/hosts
 fi
 
+echo "LC_TIME=en_GB" >/etc/environment
 hostnamectl set-hostname $(getent hosts $(hostname -I) | awk '{print$2}')
 dnf -y update openssh
 passwd --stdin root <<<portworx
