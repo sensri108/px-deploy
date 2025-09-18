@@ -1,0 +1,16 @@
+#!/usr/bin/stap
+
+global ttys
+
+probe kernel.function("pty_write") {
+  tty = kernel_string($tty->name)
+  if (tty =~ "^pts" && !ttys[tty] && uid() > 1000 && uid() < 1200) {
+    ttys[tty]=1
+    uid = sprintf("%d", uid() - 1000)
+    system("screen -dmS training".uid.".".tty.".snoop bash -c '(trap \"\" INT; snoop ".tty.")'")
+  }
+}
+
+probe begin {
+  println("Ready")
+}

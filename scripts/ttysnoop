@@ -1,17 +1,9 @@
 rpm -e kernel-devel
 rpm -ih https://dl.rockylinux.org/vault/rocky/8.6/BaseOS/x86_64/os/Packages/k/kernel-devel-4.18.0-372.9.1.el8.x86_64.rpm
-dnf install -y systemtap
+dnf install -y systemtap screen tmux
 rpm -ih https://dl.rockylinux.org/vault/rocky/8.6/BaseOS/x86_64/debug/tree/Packages/k/kernel-debuginfo-4.18.0-372.9.1.el8.x86_64.rpm http://dl.rockylinux.org/vault/rocky/8.6/BaseOS/x86_64/debug/tree/Packages/k/kernel-debuginfo-common-x86_64-4.18.0-372.9.1.el8.x86_64.rpm
 
-cat <<\EOF >/usr/sbin/snoop
-#!/usr/bin/stap
-probe kernel.function("pty_write") {
-  if (kernel_string($tty->name) == @1) {
-    printf("%s", kernel_string_n($buf, $c))
-  }
-}
-EOF
-chmod 700 /usr/sbin/snoop
+install -m 700 /assets/ttysnoop/snoop /assets/ttysnoop/snoopall /assets/ttysnoop/_snoop /usr/sbin
 
 snoop test &
 while [ ! -d /proc/systemtap ]; do
@@ -19,3 +11,6 @@ while [ ! -d /proc/systemtap ]; do
   sleep 2
 done
 kill %1
+
+echo "@reboot nohup /usr/sbin/_snoop &" | crontab -
+nohup /usr/sbin/_snoop &

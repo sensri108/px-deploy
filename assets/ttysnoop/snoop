@@ -1,0 +1,7 @@
+#!/usr/bin/stap
+
+probe kernel.function("pty_write") {
+  if (kernel_string($tty->name) == @1) {
+    printf("%s", kernel_string_n($buf, $c))
+  }
+}
