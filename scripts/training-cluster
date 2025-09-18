@@ -10,3 +10,6 @@ done
 
 # Provision MinIO
 kubectl apply -f /assets/minio/minio-deployment.yml
+
+# Delete AWS keys
+rm -f /root/.aws/credentials
