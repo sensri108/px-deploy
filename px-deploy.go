@@ -49,7 +49,6 @@ type Config struct {
 	K8s_Version              string
 	Px_Version               string
 	Stop_After               string
-	Post_Script              string
 	DryRun                   bool
 	NoSync                   bool
 	IgnoreVersion            bool
@@ -718,16 +717,6 @@ func validate_config(config *Config) []string {
 		err := cmd.Run()
 		if err != nil {
 			errormsg = append(errormsg, "Script '"+s+"' is not valid Bash")
-		}
-	}
-	if config.Post_Script != "" {
-		if _, err := os.Stat("scripts/" + config.Post_Script); os.IsNotExist(err) {
-			errormsg = append(errormsg, "Postscript '"+config.Post_Script+"' does not exist")
-		}
-		cmd := exec.Command("bash", "-n", "scripts/"+config.Post_Script)
-		err := cmd.Run()
-		if err != nil {
-			errormsg = append(errormsg, "Postscript '"+config.Post_Script+"' is not valid Bash")
 		}
 	}
 
@@ -1874,22 +1863,6 @@ func write_nodescripts(config Config) {
 			tf_common_master_script = append(tf_common_master_script, "echo \""+filename+"_stop,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 			tf_common_master_script = append(tf_common_master_script, "\n) >&/var/log/px-deploy/"+filename+"\n"...)
 		}
-	}
-
-	// add post_script if defined
-	if config.Post_Script != "" {
-		content, err := os.ReadFile("/px-deploy/.px-deploy/scripts/" + config.Post_Script)
-		if err == nil {
-			tf_post_script = append(tf_post_script, "(\n"...)
-			tf_post_script = append(tf_post_script, "echo \"Started $(date)\"\n"...)
-			tf_post_script = append(tf_post_script, "echo \""+config.Post_Script+"_start,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
-			tf_post_script = append(tf_post_script, content...)
-			tf_post_script = append(tf_post_script, "\necho \"Finished $(date)\"\n"...)
-			tf_post_script = append(tf_post_script, "echo \""+config.Post_Script+"_stop,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
-			tf_post_script = append(tf_post_script, "\n) >&/var/log/px-deploy/"+config.Post_Script+"\n"...)
-		}
-	} else {
-		tf_post_script = nil
 	}
 
 	// loop clusters (masters and nodes) to build tfvars and master/node scripts
