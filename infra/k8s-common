@@ -20,3 +20,4 @@ systemctl enable --now containerd
 systemctl enable --now podman
 systemctl enable --now kubelet
 touch /etc/containers/nodocker
+sed -i 's/^unqualified-search-registries.*$/unqualified-search-registries = ["docker.io"]/' /etc/containers/registries.conf
