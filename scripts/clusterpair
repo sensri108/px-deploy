@@ -45,13 +45,22 @@ if [ "$platform" = eks ] || [ "$platform" = ocp4 ]; then
     echo "waiting for remote portworx api lb service to respond http 200. ELB $REMOTE_EP"
     sleep 5
   done
+
+  LOCAL_PORT=$(kubectl get service portworx-api -n portworx -ojson | jq -r '.spec.ports[] | select(.name=="px-api") | .port')
+  REMOTE_PORT=$(kubectl --kubeconfig /tmp/dest_kubeconfig get service portworx-api -n portworx -ojson | jq -r '.spec.ports[] | select(.name=="px-api") | .port')
+
+  LOCAL_EP="--src-ep $LOCAL_EP:$LOCAL_PORT"
+  REMOTE_EP="--dest-ep $REMOTE_EP:$REMOTE_PORT"
+  echo "LOCAL_EP has been set to $LOCAL_EP"
+  echo "REMOTE_EP has been set to $REMOTE_EP"
+  
 #elif [ "$platform" = rancher ]; then
 #else
 #  host=$(kubectl get nodes -l 'node-role.kubernetes.io/worker in (worker,true)' -o json |jq -r '.items[0].status.addresses[] | select(.type=="InternalIP") | .address')
 fi
 
 #improvement: we may try to detect if DR licenses are enabled on both sides -> px api?
-kubectl pxc pxctl license list | grep PX-DR | grep -q yes && MODE=async-dr || MODE=migration
+/usr/bin/pxctl license list | grep PX-DR | grep -q yes && MODE=async-dr || MODE=migration
 echo Mode is $MODE
 
 if [ "$platform" = eks ]; then
@@ -63,6 +72,6 @@ if [ "$platform" = eks ]; then
 fi
 
 while : ; do
-  storkctl create clusterpair remotecluster --namespace kube-system --dest-kube-file /tmp/dest_kubeconfig --src-kube-file /root/.kube/config --provider s3 --s3-endpoint s3.amazonaws.com --s3-access-key $AWS_ACCESS_KEY --s3-secret-key $AWS_SECRET_KEY --s3-region $BUCKET_REGION  --bucket $DR_BUCKET --mode $MODE && break
+  storkctl create clusterpair remotecluster --namespace kube-system $LOCAL_EP $REMOTE_EP --dest-kube-file /tmp/dest_kubeconfig --src-kube-file /root/.kube/config --provider s3 --s3-endpoint s3.amazonaws.com --s3-access-key $AWS_ACCESS_KEY --s3-secret-key $AWS_SECRET_KEY --s3-region $BUCKET_REGION  --bucket $DR_BUCKET --mode $MODE && break
   sleep 5
 done

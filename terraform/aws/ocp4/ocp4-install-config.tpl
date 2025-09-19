@@ -34,9 +34,17 @@ platform:
 %{ for tag_key, tag_value in tpl_aws_tag ~}
       ${tag_key} : ${tag_value}
 %{ endfor ~}
-    subnets:
-    - ${tpl_privsubnet}
-    - ${tpl_pubsubnet}
+    vpc:
+      subnets:
+      - id: ${tpl_privsubnet}
+        roles:
+        - type: ClusterNode
+        - type: ControlPlaneInternalLB
+      - id: ${tpl_pubsubnet}
+        roles:
+        - type: IngressControllerLB
+        - type: BootstrapNode
+        - type: ControlPlaneExternalLB
 pullSecret: '${tpl_ocp4pullsecret}'
 sshKey: '${tpl_sshkey}'
 
