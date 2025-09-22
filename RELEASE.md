@@ -4,6 +4,11 @@
  * Fix multiple AWS key warning display
 
 ##Improvements
+ * PX Ent Version 3.4
+ * OCP 4.19
+ * PX-Backup 2.9.1
+ * ocp-kubevirt now using new RWX block
+ * update base linux image to rocky 9.5
  * Add cronjob for monitoring AWS costs
  * Simplify pxctl script
  * Simplify Grafana deployment
