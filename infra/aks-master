@@ -1,11 +1,10 @@
-cat <<EOF >/etc/yum.repos.d/azure-cli.repo
-[azure-cli]
-name=Azure CLI
-baseurl=https://packages.microsoft.com/yumrepos/azure-cli
-enabled=1
-gpgcheck=1
-gpgkey=https://packages.microsoft.com/keys/microsoft.asc
-EOF
+while ! rpm --import https://packages.microsoft.com/keys/microsoft.asc; do
+  sleep 2
+done
+
+while ! dnf install -y https://packages.microsoft.com/config/rhel/9.0/packages-microsoft-prod.rpm; do
+  sleep 2
+done
 
 while ! dnf install -y docker azure-cli; do
   sleep 2

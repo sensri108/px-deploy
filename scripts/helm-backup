@@ -1,5 +1,5 @@
 NAMESPACE=central
-VERSION=2.8.4
+VERSION=2.9.1
 
 curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-$VERSION.tgz
 helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-namespace --version $VERSION --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-csi-db",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false,installCRDs=true
