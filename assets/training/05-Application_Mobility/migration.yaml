@@ -4,7 +4,7 @@ metadata:
   name: redis-migration
   namespace: kube-system
 spec:
-  clusterPair: remotecluster
+  clusterPair: CHANGEME
   includeResources: true
   startApplications: true
   namespaces:
