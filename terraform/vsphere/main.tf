@@ -126,7 +126,12 @@ resource "vsphere_virtual_machine" "node" {
 
   disk {
     label = "disk0"
-    size  = 51
+    size  = 100
+  }
+
+  disk {
+    label = "disk1"
+    size  = 100
   }
 
   connection {
