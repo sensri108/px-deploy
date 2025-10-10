@@ -1,0 +1,33 @@
+# Configure user directories
+mv /assets/training-backup /etc/skel/training
+mkdir /etc/skel/.kube
+cat <<EOF >>/etc/skel/.bashrc
+alias k=kubectl
+complete -F __start_kubectl k
+PS1='\e[0;33m[\u@px-training \W]\$ \e[m'
+EOF
+
+Create motd
+ip=$(curl -s https://ipinfo.io/ip)
+port=$(kubectl get svc -n central px-backup-ui -o jsonpath='{.spec.ports[0].nodePort}')
+echo "PX-Backup UI: http://$ip:$port" >/etc/motd.d/training-backup
+
+# Create training users
+kubectl exec -it -n central pxcentral-keycloak-0 -- /opt/keycloak/bin/kcadm.sh config credentials --user admin --password admin --server http://localhost:8080/auth --realm master
+for i in $(seq 1 $clusters); do
+  useradd training$i
+  passwd --stdin training$i <<<portworx
+  chmod 755 /home/training$i
+  kubectl exec -it -n central pxcentral-keycloak-0 -- /opt/keycloak/bin/kcadm.sh create users -s username=training$i -s enabled=true
+  kubectl exec -it -n central pxcentral-keycloak-0 -- /opt/keycloak/bin/kcadm.sh set-password --username training$i -p training$i
+done
+
+# Collect kubeconfigs
+for i in $(seq 1 $clusters); do
+  echo trying to copy kubeconfig from cluster $i
+  while ! scp master-$i:.kube/config /home/training$i/.kube/config; do
+    sleep 2
+  done
+  cp /root/.kube/config /home/training$i/training/kubeconfig.target
+  chown training$i.training$i /home/training$i/.kube/config /home/training$i/training/kubeconfig.target
+done
