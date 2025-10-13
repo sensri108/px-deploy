@@ -309,6 +309,12 @@ resource "aws_iam_policy" "px-policy" {
   })
 }
 
+resource "aws_iam_policy" "elb-policy" {
+  name = format("elb-policy-%s-%s",var.name_prefix,var.config_name)
+  description = "px-deploy elb node policy"
+  policy = data.aws_iam_policy_document.elb_policy_doc.json
+}
+
 resource "aws_iam_role" "node-iam-role" {
   name = format("%s-%s-nodes",var.name_prefix,var.config_name)
 
@@ -327,6 +333,11 @@ resource "aws_iam_role" "node-iam-role" {
 resource "aws_iam_role_policy_attachment" "px-pol-attach" {
   role       = aws_iam_role.node-iam-role.name
   policy_arn = aws_iam_policy.px-policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "elb-pol-attach" {
+  role       = aws_iam_role.node-iam-role.name
+  policy_arn = aws_iam_policy.elb-policy.arn
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
@@ -373,6 +384,7 @@ resource "aws_instance" "node" {
 
 	metadata_options {
 		http_tokens = "required"
+		http_put_response_hop_limit = "2"
 	}
 
 	timeouts {

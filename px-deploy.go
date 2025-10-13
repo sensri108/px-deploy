@@ -935,6 +935,7 @@ func create_deployment(config Config) bool {
 			}
 			//maybe there is a better way to copy templates to working dir ?
 			exec.Command("cp", "-a", `/px-deploy/terraform/aws/main.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			exec.Command("cp", "-a", `/px-deploy/terraform/aws/aws_policies.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/aws/variables.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/aws/cloud-init.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/aws/aws-returns.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()

@@ -11,3 +11,11 @@ eval $command
 wait
 # set role for this node
 ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$cluster kubectl label node $(hostname) node-role.kubernetes.io/worker=worker
+
+# set providerID on AWS (needed for AWS ELB controller)
+if [ $cloud = aws ] && [ $platform != eks ] && [ $platform != ocp4 ]; then
+    IMDSTOKEN=$(curl -s -X PUT 'http://169.254.169.254/latest/api/token' -H 'X-aws-ec2-metadata-token-ttl-seconds: 120')
+    instance_id=$(curl -H "X-aws-ec2-metadata-token: $IMDSTOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)
+    PATCH="{\"spec\":{\"providerID\": \"$instance_id\"}}"
+    ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$cluster kubectl patch node $(hostname) -p \'$PATCH\'
+fi
