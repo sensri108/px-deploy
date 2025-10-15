@@ -34,7 +34,7 @@ EOF
 fi
 
 k8s_version=$((kubectl version --short 2>&1 || kubectl version) | awk -Fv '/Server Version: / {print $3}')
-url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true&tel=false&promop=true&operator=true"
+url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true&tel=false&operator=true"
 [ -e /usr/bin/oc ] && url="$url&osft=true"
 if [ "$cloud_drive" ]; then
   if [ "$cloud" = "azure" ]; then
@@ -50,6 +50,13 @@ fi
 if [ "$journal" ]; then
   url="$url&j=$journal"
 fi
+
+if [ "$promop" = false ]; then
+  url="$url&promop=false"
+else 
+  url="$url&promop=true"
+fi
+
 [ "$px_suffix" ] && url="$url&$px_suffix"
 [ "$vsphere_suffix" ] && url="$url&$vsphere_suffix"
 [ "$platform" = eks ] && url="$url&eks=true"
