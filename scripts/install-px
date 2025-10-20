@@ -178,3 +178,4 @@ while ! kubectl cp -n portworx $STORK_POD:/storkctl/linux/storkctl /usr/local/bi
     STORK_POD=$(kubectl get pods -n portworx -l name=stork -o jsonpath='{.items[0].metadata.name}')
 done
 chmod +x /usr/local/bin/storkctl
+storkctl completion bash >/etc/bash_completion.d/storkctl
