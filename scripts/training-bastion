@@ -23,6 +23,7 @@ docker cp $container:/storkctl/linux/storkctl /usr/bin
 docker rm $container
 cp /assets/pxctl.sh /usr/bin/pxctl
 chmod 755 /usr/bin/storkctl /usr/bin/pxctl
+storkctl completion bash >/etc/bash_completion.d/storkctl
 
 # Collect kubeconfigs
 for i in $(seq 1 $clusters); do

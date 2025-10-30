@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
+	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 )
 
@@ -378,11 +379,19 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 	var elb_sg_list []string
 
 	elbclient := elasticloadbalancing.NewFromConfig(cfg)
+	elbv2client := elasticloadbalancingv2.NewFromConfig(cfg)
 	ec2client := ec2.NewFromConfig(cfg)
 
 	elb, err := elbclient.DescribeLoadBalancers(context.TODO(), &elasticloadbalancing.DescribeLoadBalancersInput{})
 	if err != nil {
-		fmt.Println("Error retrieving information about ELBs:")
+		fmt.Println("Error retrieving information about classic ELBs:")
+		fmt.Println(err)
+		return
+	}
+
+	elbv2, err := elbv2client.DescribeLoadBalancers(context.TODO(), &elasticloadbalancingv2.DescribeLoadBalancersInput{})
+	if err != nil {
+		fmt.Println("Error retrieving information about v2 ELBs:")
 		fmt.Println(err)
 		return
 	}
@@ -390,10 +399,10 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 	// range thru loadbalancers within VPC
 	// cumulate list of their security groups
 	// delete ELB instance
-	fmt.Printf("Deleting ELBs within VPC\n")
+	fmt.Printf("Deleting classic ELBs within VPC\n")
 	for _, i := range elb.LoadBalancerDescriptions {
 		if *i.VPCId == vpc {
-			fmt.Printf("  ELB: %s ", *i.LoadBalancerName)
+			fmt.Printf("  classic ELB: %s ", *i.LoadBalancerName)
 			for _, z := range i.SecurityGroups {
 				fmt.Printf(" (attached SG %s)", z)
 				elb_sg_list = append(elb_sg_list, z)
@@ -401,6 +410,19 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 			fmt.Printf("\n")
 			wg.Add(1)
 			go delete_and_wait_elb(elbclient, *i.LoadBalancerName)
+		}
+	}
+	fmt.Printf("Deleting v2 ELBs within VPC\n")
+	for _, i := range elbv2.LoadBalancers {
+		if *i.VpcId == vpc {
+			fmt.Printf("  v2 ELB: %s (type %s)", *i.LoadBalancerName, i.Type)
+			for _, z := range i.SecurityGroups {
+				fmt.Printf(" (attached SG %s)", z)
+				elb_sg_list = append(elb_sg_list, z)
+			}
+			fmt.Printf("\n")
+			wg.Add(1)
+			go delete_and_wait_elbv2(elbv2client, *i.LoadBalancerArn)
 		}
 	}
 	wg.Wait()
@@ -505,6 +527,41 @@ func delete_and_wait_elb(client *elasticloadbalancing.Client, elbName string) {
 		}
 		if !deleted {
 			fmt.Printf("   Wait 5 sec for deletion of ELB %s \n", elbName)
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+// delete a elb instance and wait until DescribeLoadBalancer returns Error LoadBalancerNotFound
+// could be moved to waiter as soon as available in aws sdk
+func delete_and_wait_elbv2(client *elasticloadbalancingv2.Client, elbArn string) {
+	defer wg.Done()
+	_, err := client.DeleteLoadBalancer(context.TODO(), &elasticloadbalancingv2.DeleteLoadBalancerInput{
+		LoadBalancerArn: aws.String(elbArn),
+	})
+	if err != nil {
+		fmt.Println("Error deleting v2 ELB:")
+		fmt.Println(err)
+		return
+	}
+
+	deleted := false
+	for !deleted {
+		_, err := client.DescribeLoadBalancers(context.TODO(), &elasticloadbalancingv2.DescribeLoadBalancersInput{
+			LoadBalancerArns: []string{elbArn},
+		})
+
+		if err != nil {
+			if strings.Contains(fmt.Sprint(err), "LoadBalancerNotFound") {
+				deleted = true
+			} else {
+				fmt.Println("Error retrieving information about ELB deletion status:")
+				fmt.Println(err)
+				return
+			}
+		}
+		if !deleted {
+			fmt.Printf("   Wait 5 sec for deletion of ELB %s \n", elbArn)
 			time.Sleep(5 * time.Second)
 		}
 	}
