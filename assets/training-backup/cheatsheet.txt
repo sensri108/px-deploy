@@ -1,0 +1,15 @@
+kubectl exec $POD -n postgres -- createdb pxdemo
+
+kubectl exec $POD -n postgres -- psql -l
+
+kubectl exec $POD -n postgres -- pgbench -i -s 50 pxdemo
+
+kubectl exec $POD -n postgres -- psql pxdemo -c 'select count(*) from pgbench_accounts'
+
+kubectl exec $POD -n postgres -- psql -c 'drop database pxdemo'
+
+mongosh --host localhost --port 27017 --eval 'db.adminCommand({ fsync: 1, lock: true })'
+
+mongosh --host localhost --port 27017 --eval 'db.adminCommand({ fsyncUnlock: 1 })'
+
+kubectl --kubeconfig kubeconfig.target get pod -n mongo2

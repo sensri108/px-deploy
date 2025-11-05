@@ -1,31 +1,35 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-   name: px-redis-data
+  labels:
+    app: redis
+  name: redis-data
 spec:
-   storageClassName: px-csi-db
-   accessModes:
-     - ReadWriteOnce
-   resources:
-     requests:
-       storage: 1Gi
+  storageClassName: px-csi-db
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
 ---
-kind: PersistentVolumeClaim
 apiVersion: v1
+kind: Service
 metadata:
-   name: px-redis-conf
+  name: redis
 spec:
-   storageClassName: px-csi-db
-   accessModes:
-     - ReadWriteOnce
-   resources:
-     requests:
-       storage: 1Gi
+  ports:
+  - port: 6379
+    name: redis
+  clusterIP: None
+  selector:
+    app: redis
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
+  labels:
+    app: redis
 spec:
   selector:
     matchLabels:
@@ -36,35 +40,23 @@ spec:
         app: redis
     spec:
       containers:
-        - name: redis
-          image: "redis"
-          command:
-            - "redis-server"
-          args:
-            - "--protected-mode"
-            - "no"
-            - "--appendonly"
-            - "yes"
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "100Mi"
-          ports:
-            - name: redis
-              containerPort: 6379
-              protocol: "TCP"
-            - name: cluster
-              containerPort: 16379
-              protocol: "TCP"
-          volumeMounts:
-            - name: "redis-conf"
-              mountPath: "/etc/redis"
-            - name: "redis-data"
-              mountPath: "/data"
+      - name: redis
+        image: redis:8.2.3
+        args: ["--requirepass", "$(REDIS_PASS)"]
+        ports:
+        - containerPort: 6379
+          name: redis
+        env:
+        - name: REDIS_PASS
+          value: password
+        volumeMounts:
+        - name: redis-vol
+          mountPath: /data
+        lifecycle:
+          postStart:
+            exec:
+              command: ["chown", "redis:redis", "/data"]
       volumes:
-        - name: "redis-data"
-          persistentVolumeClaim:
-             claimName: px-redis-data
-        - name: "redis-conf"
-          persistentVolumeClaim:
-             claimName: px-redis-conf
+      - name: redis-vol
+        persistentVolumeClaim:
+          claimName: redis-data
