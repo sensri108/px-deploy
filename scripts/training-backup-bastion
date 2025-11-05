@@ -19,7 +19,7 @@ for i in $(seq 1 $clusters); do
   passwd --stdin training$i <<<portworx
   chmod 755 /home/training$i
   kubectl exec -it -n central pxcentral-keycloak-0 -- /opt/keycloak/bin/kcadm.sh create users -s username=training$i -s enabled=true
-  kubectl exec -it -n central pxcentral-keycloak-0 -- /opt/keycloak/bin/kcadm.sh set-password --username training$i -p training$i
+  kubectl exec -it -n central pxcentral-keycloak-0 -- /opt/keycloak/bin/kcadm.sh set-password --username training$i -p portworx
 done
 
 # Collect kubeconfigs
