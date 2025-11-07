@@ -43,6 +43,7 @@ func azure_create_variables(config *Config) []string {
 		tf_var_tags = append(tf_var_tags, "  px-deploy_username = \"unknown\"")
 	}
 	tf_var_tags = append(tf_var_tags, "  px-deploy_name = \""+config.Name+"\"")
+	tf_var_tags = append(tf_var_tags, "  pxd_uuid = \""+config.Pxd_uuid.String()+"\"")
 	tf_var_tags = append(tf_var_tags, "}\n")
 
 	switch config.Platform {
