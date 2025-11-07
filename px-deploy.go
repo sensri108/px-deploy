@@ -118,10 +118,12 @@ type Config struct {
 }
 
 type Config_Cluster struct {
-	Id            int
-	Scripts       []string
-	Instance_Type string
-	Nodes         string
+	Id         int
+	Scripts    []string
+	Aws_Type   string
+	Azure_Type string
+	Gcp_Type   string
+	Nodes      string
 }
 
 type Deployment_Status_Return struct {
