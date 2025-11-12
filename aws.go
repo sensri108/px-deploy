@@ -685,7 +685,8 @@ func stop_ec2_instances(client *ec2.Client, instanceIDs []string) {
 func terminate_ec2_instances(client *ec2.Client, instanceIDs []string) {
 	//fmt.Printf("  %s \n", instanceIDs)
 	_, err := client.TerminateInstances(context.TODO(), &ec2.TerminateInstancesInput{
-		InstanceIds: instanceIDs,
+		InstanceIds:    instanceIDs,
+		SkipOsShutdown: aws.Bool(true),
 	})
 
 	if err != nil {
