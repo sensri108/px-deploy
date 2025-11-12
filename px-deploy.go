@@ -49,6 +49,7 @@ type Config struct {
 	K8s_Version              string
 	Px_Version               string
 	Stop_After               string
+	Pxd_uuid                 uuid.UUID
 	DryRun                   bool
 	NoSync                   bool
 	IgnoreVersion            bool
@@ -118,10 +119,12 @@ type Config struct {
 }
 
 type Config_Cluster struct {
-	Id            int
-	Scripts       []string
-	Instance_Type string
-	Nodes         string
+	Id         int
+	Scripts    []string
+	Aws_Type   string
+	Azure_Type string
+	Gcp_Type   string
+	Nodes      string
 }
 
 type Deployment_Status_Return struct {
@@ -482,7 +485,7 @@ func main() {
 	}
 
 	defaults := parse_yaml("defaults.yml")
-	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
+	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, use UUID)")
 	cmdCreate.Flags().StringVarP(&flags.Platform, "platform", "p", "", "k8s | none | ocp4 | rancher | eks | gke | aks (default "+defaults.Platform+")")
 	cmdCreate.Flags().StringVarP(&flags.Clusters, "clusters", "c", "", "number of clusters to be deployed (default "+defaults.Clusters+")")
 	cmdCreate.Flags().StringVarP(&flags.Nodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default "+defaults.Nodes+")")
@@ -796,6 +799,8 @@ func prepare_deployment(config *Config, flags *Config, createName string, create
 		return string(validate_error)
 	}
 
+	config.Pxd_uuid = uuid.New()
+
 	if createName != "" {
 		if !regexp.MustCompile(`^[a-z0-9_\-\.]+$`).MatchString(createName) {
 			return fmt.Sprintf("Invalid deployment name %s\n", createName)
@@ -804,7 +809,7 @@ func prepare_deployment(config *Config, flags *Config, createName string, create
 			return fmt.Sprintf("%sDeployment '%s' already exists%s\n Please delete it by running 'px-deploy destroy -n %s' \n If this fails, remove cloud resources manually and run 'px-deploy destroy --clear -n %s'\n", Red, createName, Reset, createName, createName)
 		}
 	} else {
-		createName = uuid.New().String()
+		createName = config.Pxd_uuid.String()
 	}
 	config.Name = createName
 
@@ -1780,7 +1785,7 @@ func write_nodescripts(config Config) {
 			}
 		}
 	}
-
+	tf_env_script = append(tf_env_script, "export pxd_uuid=\""+config.Pxd_uuid.String()+"\"\n"...)
 	// get cluster specific node overrides
 	// not possible to set in env as cloud-init doesnt seem to run on full bash, so array not working
 	tf_cluster_nodes = append(tf_cluster_nodes, "export clusternodes=( \"0\" "...)

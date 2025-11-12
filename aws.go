@@ -60,6 +60,7 @@ func aws_create_variables(config *Config) []string {
 		tf_var_tags = append(tf_var_tags, "  px-deploy_username = \"unknown\"")
 	}
 	tf_var_tags = append(tf_var_tags, "  px-deploy_name = \""+config.Name+"\"")
+	tf_var_tags = append(tf_var_tags, "  pxd_uuid = \""+config.Pxd_uuid.String()+"\"")
 	tf_var_tags = append(tf_var_tags, "}\n")
 
 	switch config.Platform {
@@ -128,8 +129,8 @@ func aws_create_variables(config *Config) []string {
 		for _, clusterconf := range config.Cluster {
 			if clusterconf.Id == c {
 				//is there a cluster specific aws_type override? if not, set from generic config
-				if clusterconf.Instance_Type != "" {
-					tf_cluster_instance_type = clusterconf.Instance_Type
+				if clusterconf.Aws_Type != "" {
+					tf_cluster_instance_type = clusterconf.Aws_Type
 				}
 				if clusterconf.Nodes != "" {
 					tf_cluster_nodes = clusterconf.Nodes

@@ -28,6 +28,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
+  labels:
+    app: redis
 spec:
   selector:
     matchLabels:
@@ -39,9 +41,8 @@ spec:
     spec:
       containers:
       - name: redis
-        image: "redis:8.2.1"
-        command: ["redis-server"]
-        args: [ "--requirepass", "$(REDIS_PASS)" ]
+        image: redis:8.2.3
+        args: ["--requirepass", "$(REDIS_PASS)"]
         ports:
         - containerPort: 6379
           name: redis
@@ -49,9 +50,13 @@ spec:
         - name: REDIS_PASS
           value: password
         volumeMounts:
-        - name: "redis-data"
-          mountPath: "/data"
+        - name: redis-vol
+          mountPath: /data
+        lifecycle:
+          postStart:
+            exec:
+              command: ["chown", "redis:redis", "/data"]
       volumes:
-      - name: "redis-data"
+      - name: redis-vol
         persistentVolumeClaim:
           claimName: redis-data
