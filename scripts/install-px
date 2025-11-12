@@ -40,7 +40,7 @@ if [ "$cloud_drive" ]; then
   if [ "$cloud" = "azure" ]; then
     url="$url&e=AZURE_CLIENT_ID%3D$azure_client_id%2CAZURE_CLIENT_SECRET%3D$azure_client_secret%2CAZURE_TENANT_ID%3D$azure_tenant_id"
   fi
-  url="$url&s=%22$cloud_drive%2Ctags%3Dpxd_uuid%3A$pxd_uuid%22&mz=0&kd=$cloud_drive%2Ctags%3Dpxd_uuid%3A$pxd_uuid"
+  url="$url&s=%22$cloud_drive%2Ctags%3Dpxd_uuid_cd%3A$pxd_uuid%22&mz=0&kd=$cloud_drive%2Ctags%3Dpxd_uuid_cd%3A$pxd_uuid"
   #url="$url&s=%22$cloud_drive%2Ctags%3Dpxd_uuid%3A$pxd_uuid%22&mz=0"
   
   [ "$cloud" = aws ] && url="$url&ce=aws"
