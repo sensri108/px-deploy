@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/google/uuid"
 )
 
 func aws_create_variables(config *Config) []string {
@@ -242,10 +244,10 @@ func aws_get_instances(config *Config, client *ec2.Client) ([]string, error) {
 	return aws_instances, nil
 }
 
-func aws_get_clouddrives(aws_instances_split []([]string), client *ec2.Client) ([]string, error) {
+func aws_get_clouddrives(aws_instances_split []([]string), uuid uuid.UUID, client *ec2.Client) ([]string, error) {
 	var aws_volumes []string
 
-	fmt.Printf("Searching for portworx clouddrive volumes:\n")
+	fmt.Printf("Searching for portworx clouddrive volumes attached to instances within VPC\n")
 	for i := range aws_instances_split {
 		//get list of attached volumes, filter for PX Clouddrive Volumes
 		volumes, err := client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
@@ -272,11 +274,35 @@ func aws_get_clouddrives(aws_instances_split []([]string), client *ec2.Client) (
 		}
 
 		for _, i := range volumes.Volumes {
-			fmt.Println("  " + *i.VolumeId)
+			fmt.Printf("  %s\n", *i.VolumeId)
 			aws_volumes = append(aws_volumes, *i.VolumeId)
 		}
 	}
-	return aws_volumes, nil
+	fmt.Printf("Searching for portworx clouddrive volumes by deployment uuid tag: %s\n", uuid.String())
+	//get list of attached volumes, filter for PX Clouddrive Volumes
+	volumes, err := client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
+		Filters: []types.Filter{
+			{
+				Name: aws.String("tag:pxd_uuid_cd"),
+				Values: []string{
+					uuid.String(),
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		fmt.Println("Error retrieving volume list by uuid:")
+		return nil, err
+	}
+
+	for _, i := range volumes.Volumes {
+		fmt.Printf("  %s\n", *i.VolumeId)
+		aws_volumes = append(aws_volumes, *i.VolumeId)
+	}
+	fmt.Println("merging volume results")
+	slices.Sort(aws_volumes)
+	return slices.Compact(aws_volumes), nil
 }
 
 func aws_delete_nodegroups(config *Config) error {

@@ -1272,7 +1272,7 @@ func destroy_deployment(name string, destroyForce bool) {
 			aws_instances_split[i/196] = append(aws_instances_split[i/196], val)
 		}
 
-		aws_volumes, err := aws_get_clouddrives(aws_instances_split, client)
+		aws_volumes, err := aws_get_clouddrives(aws_instances_split, config.Pxd_uuid, client)
 		if err != nil {
 			panic(fmt.Sprintf("error listing aws clouddrives %v \n", err.Error()))
 		}
