@@ -688,7 +688,7 @@ func validate_config(config *Config) []string {
 		errormsg = append(errormsg, "Invalid Kubernetes version '"+config.K8s_Version+"'")
 	}
 
-	if !regexp.MustCompile(`^[0-9\.]+$`).MatchString(config.Px_Version) {
+	if !regexp.MustCompile(`^[0-9\.\-a-z]+$`).MatchString(config.Px_Version) {
 		errormsg = append(errormsg, "Invalid Portworx version '"+config.Px_Version+"'")
 	}
 
