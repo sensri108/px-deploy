@@ -404,6 +404,7 @@ resource "aws_instance" "node" {
 	user_data_base64			= 	base64gzip(local_file.cloud-init[each.key].content)
 	tags 					= {
 								Name = each.key
+								pxd_cluster = each.value.cluster
 	}
 
         connection {
