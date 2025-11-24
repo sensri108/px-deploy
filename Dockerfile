@@ -2,7 +2,7 @@
 #docker buildx create --use --platform=linux/arm64,linux/amd64 --name multi-platform-builder
 #docker buildx inspect --bootstrap
 #docker buildx build --platform=linux/arm64,linux/amd64 --push -t ghcr.io/danpaul81/px-deploy:dev .
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine3.21 AS build
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine3.22 AS build
 RUN mkdir -p /linux/amd64
 RUN mkdir -p /linux/arm64
 RUN wget -P / https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
@@ -19,7 +19,7 @@ ARG TARGETOS TARGETARCH TARGETPLATFORM
 RUN cd /root/go/src/px-deploy; GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /$TARGETPLATFORM/px-deploy
 COPY terraform /px-deploy/terraform
 
-FROM --platform=$TARGETPLATFORM alpine:3.21
+FROM --platform=$TARGETPLATFORM alpine:3.22
 RUN apk add --no-cache openssh-client-default bash rsync
 RUN echo ServerAliveInterval 300 >/etc/ssh/ssh_config
 RUN echo ServerAliveCountMax 2 >>/etc/ssh/ssh_config
