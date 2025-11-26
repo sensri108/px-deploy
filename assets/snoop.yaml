@@ -1,0 +1,1293 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: snoop
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: snoop
+data:
+  nginx.conf: |
+    user root;
+    worker_processes auto;
+    pid /var/run/nginx.pid;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        sendfile on;
+        keepalive_timeout 65;
+
+        include /etc/nginx/conf.d/*.conf;
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: default-config
+  namespace: snoop
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl http2;
+        server_name _;
+        root /var/www/html;
+        index index.php index.html;
+
+        ssl_certificate /etc/nginx/ssl/tls.crt;
+        ssl_certificate_key /etc/nginx/ssl/tls.key;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        location ~ \.php$ {
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_param HTTPS on;
+            include fastcgi_params;
+        }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: php-config
+  namespace: snoop
+data:
+  custom.ini: |
+    upload_max_filesize = 50M
+    post_max_size = 50M
+    memory_limit = 256M
+    max_execution_time = 300
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: php-app
+  namespace: snoop
+data:
+  index.php: |
+    <?php
+    echo "<h1>Nginx + PHP on Kubernetes with SSL</h1>";
+    echo "<p>Server: " . $_SERVER['SERVER_NAME'] . "</p>";
+    echo "<p>PHP Version: " . phpversion() . "</p>";
+    echo "<p>HTTPS: " . ($_SERVER['HTTPS'] ?? 'off') . "</p>";
+    ?>
+  health.php: |
+    <?php
+    echo "OK";
+    ?>
+  snoop.php: |
+    <?php
+    // Terminal Session Monitor - Real-time web-based terminal viewer
+    // Monitors /var/log/sessions for terminal session recordings
+    
+    $action = $_GET['action'] ?? 'index';
+    $snoopDir = '/var/log/sessions';
+    
+    // API: Get all session files organized by username
+    if ($action === 'get_files') {
+        header('Content-Type: application/json');
+        $files = [];
+    
+        if (is_dir($snoopDir)) {
+            foreach (scandir($snoopDir) as $file) {
+                if ($file === '.' || $file === '..') continue;
+    
+                $filePath = $snoopDir . '/' . $file;
+                if (is_file($filePath)) {
+                    $parts = explode('.', $file, 2);
+                    if (count($parts) === 2) {
+                        list($username, $tty) = $parts;
+                        $files[$username][$tty] = $file;
+                    }
+                }
+            }
+        }
+    
+        echo json_encode($files);
+        exit;
+    }
+    
+    // API: Tail file content (incremental reads)
+    if ($action === 'tail') {
+        header('Content-Type: application/json');
+    
+        $filename = $_GET['file'] ?? '';
+        $lastSize = intval($_GET['lastSize'] ?? 0);
+        $filePath = $snoopDir . '/' . basename($filename);
+    
+        if (!file_exists($filePath)) {
+            echo json_encode(['content' => '', 'size' => 0, 'exists' => false]);
+            exit;
+        }
+    
+        $currentSize = filesize($filePath);
+        $content = '';
+        $isNew = false;
+    
+        if ($currentSize < $lastSize) {
+            // File was recreated - send full content
+            $content = file_get_contents($filePath);
+            $isNew = true;
+        } elseif ($currentSize > $lastSize) {
+            // File grew - send only new content
+            $handle = fopen($filePath, 'r');
+            fseek($handle, $lastSize);
+            $content = fread($handle, $currentSize - $lastSize);
+            fclose($handle);
+        }
+    
+        echo json_encode([
+            'content' => $content,
+            'size' => $currentSize,
+            'exists' => true,
+            'isNew' => $isNew
+        ]);
+        exit;
+    }
+    ?>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Terminal Session Monitor</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+            body {
+                font-family: 'Courier New', monospace;
+                background: #1e1e1e;
+                color: #d4d4d4;
+                height: 100vh;
+                overflow: hidden;
+            }
+    
+            .container {
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+            }
+    
+            /* Header */
+            .header {
+                background: #2d2d30;
+                padding: 10px 20px;
+                border-bottom: 1px solid #3e3e42;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+    
+            .header h1 {
+                font-size: 18px;
+                color: #cccccc;
+            }
+    
+            /* Font controls */
+            .font-controls {
+                display: flex;
+                gap: 5px;
+                align-items: center;
+            }
+    
+            .font-controls span {
+                color: #858585;
+                font-size: 12px;
+                margin: 0 5px;
+            }
+    
+            .font-controls button {
+                background: #3e3e42;
+                color: #cccccc;
+                border: 1px solid #555;
+                padding: 5px 10px;
+                cursor: pointer;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                border-radius: 3px;
+            }
+    
+            .font-controls button:hover { background: #4e4e52; }
+            .font-controls button:active { background: #2e2e32; }
+    
+            /* Tab system */
+            .tab-container {
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+                overflow: hidden;
+            }
+    
+            .tabs {
+                display: flex;
+                background: #2d2d30;
+                border-bottom: 1px solid #3e3e42;
+                overflow-x: auto;
+            }
+    
+            .tab {
+                padding: 10px 20px;
+                cursor: pointer;
+                background: #2d2d30;
+                border-right: 1px solid #3e3e42;
+                white-space: nowrap;
+                user-select: none;
+            }
+    
+            .tab:hover { background: #3e3e42; }
+    
+            .tab.active {
+                background: #1e1e1e;
+                color: #4ec9b0;
+                border-bottom: 3px solid #4ec9b0;
+                font-weight: bold;
+            }
+    
+            .tab.unseen { color: #f14c4c; font-weight: bold; }
+            .tab.seen { color: #4ec9b0; }
+    
+            .tab-content {
+                display: none;
+                flex: 1;
+                overflow: hidden;
+            }
+    
+            .tab-content.active {
+                display: flex;
+                flex-direction: column;
+            }
+    
+            /* Sub-tabs */
+            .sub-tabs {
+                display: flex;
+                background: #252526;
+                border-bottom: 1px solid #3e3e42;
+                overflow-x: auto;
+            }
+    
+            .sub-tab {
+                padding: 8px 16px;
+                cursor: pointer;
+                background: #252526;
+                border-right: 1px solid #3e3e42;
+                white-space: nowrap;
+                font-size: 14px;
+                user-select: none;
+            }
+    
+            .sub-tab:hover { background: #2d2d30; }
+    
+            .sub-tab.active {
+                background: #1e1e1e;
+                color: #569cd6;
+                border-bottom: 3px solid #569cd6;
+                font-weight: bold;
+            }
+    
+            .sub-tab.unseen { color: #f14c4c; font-weight: bold; }
+            .sub-tab.seen { color: #4ec9b0; }
+    
+            .sub-tab-content {
+                display: none;
+                flex: 1;
+                overflow: hidden;
+                position: relative;
+            }
+    
+            .sub-tab-content.active { display: block; }
+    
+            /* Terminal display */
+            .terminal {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: #0c0c0c;
+                color: #cccccc;
+                font-family: 'Consolas', 'Courier New', monospace;
+                font-size: 14px;
+                line-height: 1.2;
+                padding: 10px;
+                overflow: auto;
+                white-space: pre;
+            }
+    
+            /* ANSI color palette */
+            .ansi-fg-0 { color: #0c0c0c; }
+            .ansi-fg-1 { color: #c50f1f; }
+            .ansi-fg-2 { color: #13a10e; }
+            .ansi-fg-3 { color: #c19c00; }
+            .ansi-fg-4 { color: #0037da; }
+            .ansi-fg-5 { color: #881798; }
+            .ansi-fg-6 { color: #3a96dd; }
+            .ansi-fg-7 { color: #cccccc; }
+            .ansi-fg-8 { color: #767676; }
+            .ansi-fg-9 { color: #e74856; }
+            .ansi-fg-10 { color: #16c60c; }
+            .ansi-fg-11 { color: #f9f1a5; }
+            .ansi-fg-12 { color: #3b78ff; }
+            .ansi-fg-13 { color: #b4009e; }
+            .ansi-fg-14 { color: #61d6d6; }
+            .ansi-fg-15 { color: #f2f2f2; }
+    
+            .ansi-bg-0 { background-color: #0c0c0c; }
+            .ansi-bg-1 { background-color: #c50f1f; }
+            .ansi-bg-2 { background-color: #13a10e; }
+            .ansi-bg-3 { background-color: #c19c00; }
+            .ansi-bg-4 { background-color: #0037da; }
+            .ansi-bg-5 { background-color: #881798; }
+            .ansi-bg-6 { background-color: #3a96dd; }
+            .ansi-bg-7 { background-color: #cccccc; }
+            .ansi-bg-8 { background-color: #767676; }
+            .ansi-bg-9 { background-color: #e74856; }
+            .ansi-bg-10 { background-color: #16c60c; }
+            .ansi-bg-11 { background-color: #f9f1a5; }
+            .ansi-bg-12 { background-color: #3b78ff; }
+            .ansi-bg-13 { background-color: #b4009e; }
+            .ansi-bg-14 { background-color: #61d6d6; }
+            .ansi-bg-15 { background-color: #f2f2f2; }
+    
+            /* Text styles */
+            .ansi-bold { font-weight: bold; }
+            .ansi-dim { opacity: 0.5; }
+            .ansi-italic { font-style: italic; }
+            .ansi-underline { text-decoration: underline; }
+            .ansi-blink { animation: blink 1s infinite; }
+            .ansi-reverse { color: #0c0c0c; background-color: #cccccc; }
+            .ansi-hidden { visibility: hidden; }
+            .ansi-strikethrough { text-decoration: line-through; }
+    
+            .terminal-cursor {
+                background-color: #cccccc;
+                color: #000;
+            }
+    
+            @keyframes blink {
+                0%, 49% { opacity: 1; }
+                50%, 100% { opacity: 0; }
+            }
+    
+            .empty-state {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                color: #858585;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📺 Terminal Session Monitor</h1>
+                <div class="font-controls">
+                    <span>Font Size:</span>
+                    <button onclick="changeFontSize(-2)">A−</button>
+                    <button onclick="changeFontSize(2)">A+</button>
+                    <button onclick="changeFontSize(0)">Reset</button>
+                </div>
+            </div>
+            <div class="tab-container" id="mainTabContainer">
+                <div class="empty-state">Scanning for files...</div>
+            </div>
+        </div>
+    
+        <script>
+            // ============================================================================
+            // STATE MANAGEMENT
+            // ============================================================================
+    
+            const state = {
+                files: {},              // File structure: {username: {tty: filename}}
+                fileSize: {},           // Track file sizes for incremental reads
+                activeUsername: null,   // Currently selected username tab
+                activeTty: {},          // Currently selected TTY for each username
+                terminals: {},          // Terminal renderer instances
+                fontSize: 14,           // Current font size
+                seenTabs: new Set()     // Track which tabs have been viewed
+            };
+    
+            // ============================================================================
+            // ANSI PARSER - Handles terminal escape sequences and styling
+            // ============================================================================
+    
+            class AnsiParser {
+                constructor() {
+                    this.reset();
+                }
+    
+                reset() {
+                    this.fg = this.bg = null;
+                    this.bold = this.dim = this.italic = this.underline = false;
+                    this.blink = this.reverse = this.hidden = this.strikethrough = false;
+                }
+    
+                getClasses() {
+                    const classes = [];
+                    if (this.fg !== null) classes.push(`ansi-fg-${this.fg}`);
+                    if (this.bg !== null) classes.push(`ansi-bg-${this.bg}`);
+                    if (this.bold) classes.push('ansi-bold');
+                    if (this.dim) classes.push('ansi-dim');
+                    if (this.italic) classes.push('ansi-italic');
+                    if (this.underline) classes.push('ansi-underline');
+                    if (this.blink) classes.push('ansi-blink');
+                    if (this.reverse) classes.push('ansi-reverse');
+                    if (this.hidden) classes.push('ansi-hidden');
+                    if (this.strikethrough) classes.push('ansi-strikethrough');
+                    return classes;
+                }
+    
+                handleSGR(params) {
+                    if (!params || params === '0') {
+                        this.reset();
+                        return;
+                    }
+    
+                    const codes = params.split(';').map(n => parseInt(n) || 0);
+                    let i = 0;
+    
+                    while (i < codes.length) {
+                        const code = codes[i];
+    
+                        // Reset
+                        if (code === 0) this.reset();
+    
+                        // Styles
+                        else if (code === 1) this.bold = true;
+                        else if (code === 2) this.dim = true;
+                        else if (code === 3) this.italic = true;
+                        else if (code === 4) this.underline = true;
+                        else if (code === 5) this.blink = true;
+                        else if (code === 7) this.reverse = true;
+                        else if (code === 8) this.hidden = true;
+                        else if (code === 9) this.strikethrough = true;
+    
+                        // Reset styles
+                        else if (code === 22) this.bold = this.dim = false;
+                        else if (code === 23) this.italic = false;
+                        else if (code === 24) this.underline = false;
+                        else if (code === 25) this.blink = false;
+                        else if (code === 27) this.reverse = false;
+                        else if (code === 28) this.hidden = false;
+                        else if (code === 29) this.strikethrough = false;
+    
+                        // Foreground colors (standard)
+                        else if (code >= 30 && code <= 37) this.fg = code - 30;
+                        else if (code === 39) this.fg = null;
+    
+                        // Background colors (standard)
+                        else if (code >= 40 && code <= 47) this.bg = code - 40;
+                        else if (code === 49) this.bg = null;
+    
+                        // Bright colors
+                        else if (code >= 90 && code <= 97) this.fg = code - 82;
+                        else if (code >= 100 && code <= 107) this.bg = code - 92;
+    
+                        // 256-color mode
+                        else if (code === 38 && codes[i+1] === 5) {
+                            this.fg = codes[i+2] % 16;
+                            i += 2;
+                        }
+                        else if (code === 48 && codes[i+1] === 5) {
+                            this.bg = codes[i+2] % 16;
+                            i += 2;
+                        }
+    
+                        i++;
+                    }
+                }
+            }
+    
+            // ============================================================================
+            // TERMINAL RENDERER - Emulates a terminal display
+            // ============================================================================
+    
+            class TerminalRenderer {
+                constructor(element) {
+                    this.element = element;
+                    this.cols = 475;
+                    this.rows = 117;
+                    this.cursorX = 0;
+                    this.cursorY = 0;
+                    this.savedCursorX = 0;
+                    this.savedCursorY = 0;
+                    this.scrollTop = 0;
+                    this.scrollBottom = this.rows - 1;
+                    this.parser = new AnsiParser();
+                    this.renderScheduled = false;
+                    this.cursorVisible = true;
+                    this.screenWasCleared = false;
+                    this.alternateBuffer = null;
+                    this.initBuffer();
+                }
+    
+                initBuffer() {
+                    this.buffer = Array(this.rows).fill().map(() =>
+                        Array(this.cols).fill().map(() => ({char: ' ', classes: []}))
+                    );
+                }
+    
+                write(data) {
+                    let i = 0;
+    
+                    while (i < data.length) {
+                        const char = data[i];
+    
+                        // Handle escape sequences
+                        if (char === '\x1b') {
+                            i = this.handleEscape(data, i);
+                            continue;
+                        }
+    
+                        // Handle control characters
+                        if (char === '\r') { this.cursorX = 0; i++; continue; }
+                        if (char === '\n') { this.lineFeed(); i++; continue; }
+                        if (char === '\b') { if (this.cursorX > 0) this.cursorX--; i++; continue; }
+                        if (char === '\t') { this.cursorX = Math.min(this.cols - 1, (Math.floor(this.cursorX / 8) + 1) * 8); i++; continue; }
+    
+                        // Handle printable characters
+                        if (char.charCodeAt(0) >= 32) {
+                            this.putChar(char);
+                        }
+    
+                        i++;
+                    }
+    
+                    this.scheduleRender();
+                }
+    
+                handleEscape(data, i) {
+                    const next = data[i + 1];
+    
+                    // CSI sequences: ESC [
+                    if (next === '[') {
+                        const match = data.substring(i).match(/^[\x1b]\[([0-9;?]*)([A-Za-z@`])/);
+                        if (match) {
+                            this.handleCSI(match[1], match[2]);
+                            return i + match[0].length;
+                        }
+                    }
+    
+                    // OSC sequences: ESC ]
+                    else if (next === ']') {
+                        const match = data.substring(i).match(/^[\x1b]\][^\x07\x1b]*?([\x07]|[\x1b]\\|\x9c)/);
+                        if (match) return i + match[0].length;
+                    }
+    
+                    // DCS sequences: ESC P
+                    else if (next === 'P') {
+                        const match = data.substring(i).match(/^[\x1b]P[^\x1b]*?([\x1b]\\|\x9c)/);
+                        if (match) return i + match[0].length;
+                    }
+    
+                    // Other string sequences: ESC X, ESC ^, ESC _
+                    else if ('X^_'.includes(next)) {
+                        const match = data.substring(i).match(/^[\x1b][X\^_][^\x1b]*?([\x1b]\\|\x9c)/);
+                        if (match) return i + match[0].length;
+                    }
+    
+                    // Character set selection: ESC (, ESC ), ESC *, ESC +
+                    else if ('()*+'.includes(next)) {
+                        return i + 3;
+                    }
+    
+                    // Single character functions
+                    else if (next === 'D') { this.cursorY = Math.min(this.rows - 1, this.cursorY + 1); return i + 2; }
+                    else if (next === 'E') { this.cursorY = Math.min(this.rows - 1, this.cursorY + 1); this.cursorX = 0; return i + 2; }
+                    else if (next === 'M') { this.cursorY = Math.max(0, this.cursorY - 1); return i + 2; }
+                    else if (next === 'c') { this.reset(); return i + 2; }
+    
+                    // Keypad modes: ESC =, ESC >
+                    else if ('=>'.includes(next)) {
+                        return i + 2;
+                    }
+    
+                    // Save/restore cursor: ESC 7, ESC 8
+                    else if (next === '7') { this.savedCursorX = this.cursorX; this.savedCursorY = this.cursorY; return i + 2; }
+                    else if (next === '8') { this.cursorX = this.savedCursorX; this.cursorY = this.savedCursorY; return i + 2; }
+    
+                    return i + 1;
+                }
+    
+                handleCSI(params, cmd) {
+                    const args = params ? params.split(';').map(n => parseInt(n) || 0) : [0];
+                    const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+    
+                    switch (cmd) {
+                        // Cursor positioning
+                        case 'H': case 'f':
+                            this.cursorY = clamp((args[0] || 1) - 1, 0, this.rows - 1);
+                            this.cursorX = clamp((args[1] || 1) - 1, 0, this.cols - 1);
+                            break;
+    
+                        // Cursor movement
+                        case 'A': this.cursorY = Math.max(0, this.cursorY - (args[0] || 1)); break;
+                        case 'B': this.cursorY = Math.min(this.rows - 1, this.cursorY + (args[0] || 1)); break;
+                        case 'C': this.cursorX = Math.min(this.cols - 1, this.cursorX + (args[0] || 1)); break;
+                        case 'D': this.cursorX = Math.max(0, this.cursorX - (args[0] || 1)); break;
+                        case 'E': this.cursorY = Math.min(this.rows - 1, this.cursorY + (args[0] || 1)); this.cursorX = 0; break;
+                        case 'F': this.cursorY = Math.max(0, this.cursorY - (args[0] || 1)); this.cursorX = 0; break;
+                        case 'G': this.cursorX = clamp((args[0] || 1) - 1, 0, this.cols - 1); break;
+                        case 'd': this.cursorY = clamp((args[0] || 1) - 1, 0, this.rows - 1); break;
+    
+                        // Erasing
+                        case 'J':
+                            if (args[0] === 2 || args[0] === 3) this.clearScreen();
+                            else if (args[0] === 0) this.clearFromCursor();
+                            else if (args[0] === 1) this.clearToCursor();
+                            break;
+    
+                        case 'K':
+                            const y = this.cursorY;
+                            if (args[0] === 0) {
+                                for (let x = this.cursorX; x < this.cols; x++)
+                                    this.buffer[y][x] = {char: ' ', classes: []};
+                            } else if (args[0] === 1) {
+                                for (let x = 0; x <= this.cursorX; x++)
+                                    this.buffer[y][x] = {char: ' ', classes: []};
+                            } else if (args[0] === 2) {
+                                for (let x = 0; x < this.cols; x++)
+                                    this.buffer[y][x] = {char: ' ', classes: []};
+                            }
+                            break;
+    
+                        // Colors and styles
+                        case 'm': this.parser.handleSGR(params); break;
+    
+                        // Save/restore cursor
+                        case 's': this.savedCursorX = this.cursorX; this.savedCursorY = this.cursorY; break;
+                        case 'u': this.cursorX = this.savedCursorX; this.cursorY = this.savedCursorY; break;
+    
+                        // Scrolling region
+                        case 'r':
+                            this.scrollTop = Math.max(0, (args[0] || 1) - 1);
+                            this.scrollBottom = Math.min(this.rows - 1, (args[1] || this.rows) - 1);
+                            break;
+    
+                        // Mode setting
+                        case 'h':
+                            if (params === '?1049') {
+                                // Switch to alternate buffer
+                                this.alternateBuffer = this.buffer.map(r => r.map(c => ({...c})));
+                                this.clearScreen();
+                            } else if (params === '?25') {
+                                this.cursorVisible = true;
+                            }
+                            break;
+    
+                        case 'l':
+                            if (params === '?1049' && this.alternateBuffer) {
+                                // Restore from alternate buffer
+                                this.buffer = this.alternateBuffer;
+                                this.alternateBuffer = null;
+                            } else if (params === '?25') {
+                                this.cursorVisible = false;
+                            }
+                            break;
+                    }
+                }
+    
+                putChar(char) {
+                    if (this.cursorX >= this.cols) {
+                        this.cursorX = 0;
+                        this.cursorY++;
+                        if (this.cursorY > this.scrollBottom) {
+                            this.scrollUp();
+                            this.cursorY = this.scrollBottom;
+                        }
+                    }
+    
+                    this.buffer[this.cursorY][this.cursorX] = {
+                        char: char,
+                        classes: this.parser.getClasses()
+                    };
+                    this.cursorX++;
+                }
+    
+                lineFeed() {
+                    this.cursorY++;
+                    if (this.cursorY >= this.rows) {
+                        this.scrollUp();
+                        this.cursorY = this.rows - 1;
+                    }
+                }
+    
+                scrollUp() {
+                    const newLine = Array(this.cols).fill().map(() => ({char: ' ', classes: []}));
+                    for (let y = this.scrollTop; y < this.scrollBottom; y++) {
+                        this.buffer[y] = this.buffer[y + 1];
+                    }
+                    this.buffer[this.scrollBottom] = newLine;
+                }
+    
+                clearScreen() {
+                    this.initBuffer();
+                    this.cursorX = 0;
+                    this.cursorY = 0;
+                    this.screenWasCleared = true;
+                }
+    
+                clearFromCursor() {
+                    for (let x = this.cursorX; x < this.cols; x++) {
+                        this.buffer[this.cursorY][x] = {char: ' ', classes: []};
+                    }
+                    for (let y = this.cursorY + 1; y < this.rows; y++) {
+                        for (let x = 0; x < this.cols; x++) {
+                            this.buffer[y][x] = {char: ' ', classes: []};
+                        }
+                    }
+                }
+    
+                clearToCursor() {
+                    for (let y = 0; y < this.cursorY; y++) {
+                        for (let x = 0; x < this.cols; x++) {
+                            this.buffer[y][x] = {char: ' ', classes: []};
+                        }
+                    }
+                    for (let x = 0; x <= this.cursorX; x++) {
+                        this.buffer[this.cursorY][x] = {char: ' ', classes: []};
+                    }
+                }
+    
+                reset() {
+                    this.initBuffer();
+                    this.cursorX = 0;
+                    this.cursorY = 0;
+                    this.parser.reset();
+                    this.element.innerHTML = '';
+                }
+    
+                scheduleRender() {
+                    if (!this.renderScheduled) {
+                        this.renderScheduled = true;
+                        requestAnimationFrame(() => {
+                            this.render();
+                            this.renderScheduled = false;
+                        });
+                    }
+                }
+    
+                render() {
+                    const escapeHtml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+                    // Find starting row (skip empty rows after clear)
+                    let startRow = 0;
+                    if (this.screenWasCleared) {
+                        for (let y = 0; y < this.rows; y++) {
+                            if (this.buffer[y].some(c => c.char !== ' ')) {
+                                startRow = y;
+                                break;
+                            }
+                        }
+                        this.screenWasCleared = false;
+                        this.element.scrollTop = 0;
+                    }
+    
+                    // Build HTML
+                    let html = '';
+                    for (let y = startRow; y < this.rows; y++) {
+                        let line = '';
+                        let currentClass = '';
+                        let spanOpen = false;
+    
+                        for (let x = 0; x < this.cols; x++) {
+                            const cell = this.buffer[y][x];
+                            const classes = cell.classes.join(' ');
+                            const isCursor = this.cursorVisible && x === this.cursorX && y === this.cursorY;
+    
+                            // Open/close spans when classes change
+                            if (classes !== currentClass) {
+                                if (spanOpen) {
+                                    line += '</span>';
+                                    spanOpen = false;
+                                }
+                                if (cell.classes.length > 0) {
+                                    line += `<span class="${classes}">`;
+                                    spanOpen = true;
+                                }
+                                currentClass = classes;
+                            }
+    
+                            const char = cell.char === ' ' ? '&nbsp;' : escapeHtml(cell.char);
+                            line += isCursor ? `<span class="terminal-cursor">${char}</span>` : char;
+                        }
+    
+                        if (spanOpen) line += '</span>';
+                        html += line + (y < this.rows - 1 ? '\n' : '');
+                    }
+    
+                    this.element.innerHTML = html;
+    
+                    // Ensure scroll position
+                    if (startRow > 0) {
+                        requestAnimationFrame(() => this.element.scrollTop = 0);
+                    }
+                }
+            }
+    
+            // ============================================================================
+            // API FUNCTIONS
+            // ============================================================================
+    
+            async function fetchFiles() {
+                try {
+                    const response = await fetch('?action=get_files');
+                    const files = await response.json();
+    
+                    const filesChanged = JSON.stringify(files) !== JSON.stringify(state.files);
+                    state.files = files;
+    
+                    if (filesChanged) {
+                        // Check if new terminals were added
+                        let hasNewTerminals = false;
+                        for (const username in files) {
+                            for (const tty in files[username]) {
+                                const filename = files[username][tty];
+                                if (!state.terminals[filename]) {
+                                    hasNewTerminals = true;
+                                    break;
+                                }
+                            }
+                            if (hasNewTerminals) break;
+                        }
+    
+                        if (hasNewTerminals) {
+                            renderTabs();
+                        } else {
+                            updateTabColors();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching files:', error);
+                }
+            }
+    
+            async function tailFile(filename) {
+                try {
+                    const lastSize = state.fileSize[filename] || 0;
+                    const response = await fetch(`?action=tail&file=${encodeURIComponent(filename)}&lastSize=${lastSize}`);
+                    const data = await response.json();
+    
+                    if (!data.exists) {
+                        delete state.fileSize[filename];
+                        return;
+                    }
+    
+                    // Mark tab as unseen if new data arrived and tab is not active
+                    if (data.content && data.content.length > 0) {
+                        let isActive = false;
+    
+                        for (const username in state.files) {
+                            for (const tty in state.files[username]) {
+                                if (state.files[username][tty] === filename) {
+                                    if (username === state.activeUsername && tty === state.activeTty[username]) {
+                                        isActive = true;
+                                    }
+                                }
+                            }
+                        }
+    
+                        if (!isActive) {
+                            state.seenTabs.delete(filename);
+                            updateTabColors();
+                        }
+                    }
+    
+                    state.fileSize[filename] = data.size;
+    
+                    if (data.content && state.terminals[filename]) {
+                        if (data.isNew) {
+                            state.terminals[filename].reset();
+                        }
+                        state.terminals[filename].write(data.content);
+                    }
+                } catch (error) {
+                    console.error(`Error tailing file ${filename}:`, error);
+                }
+            }
+    
+            // ============================================================================
+            // UI RENDERING
+            // ============================================================================
+    
+            function renderTabs() {
+                const container = document.getElementById('mainTabContainer');
+                const usernames = Object.keys(state.files);
+    
+                if (usernames.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No files found</div>';
+                    return;
+                }
+    
+                // Don't auto-switch if current user still exists
+                if (!state.activeUsername || !usernames.includes(state.activeUsername)) {
+                    state.activeUsername = usernames[0];
+                }
+    
+                let html = '<div class="tabs">';
+    
+                // Render parent tabs
+                usernames.forEach(username => {
+                    const isActive = username === state.activeUsername;
+                    const hasUnseen = checkUserHasUnseen(username);
+                    const seenClass = hasUnseen ? 'unseen' : 'seen';
+    
+                    html += `<div class="tab ${isActive ? 'active' : ''} ${seenClass}" onclick="switchUsername('${username}')">`;
+                    html += username;
+                    html += '</div>';
+                });
+    
+                html += '</div>';
+    
+                // Render tab contents
+                usernames.forEach(username => {
+                    const isActive = username === state.activeUsername;
+                    html += `<div class="tab-content ${isActive ? 'active' : ''}" id="user-${username}">`;
+                    html += renderSubTabs(username);
+                    html += '</div>';
+                });
+    
+                container.innerHTML = html;
+                initTerminals();
+            }
+    
+            function renderSubTabs(username) {
+                const ttys = Object.keys(state.files[username]);
+    
+                // Don't auto-switch if current TTY still exists
+                if (!state.activeTty[username] || !ttys.includes(state.activeTty[username])) {
+                    state.activeTty[username] = ttys[0];
+                }
+    
+                let html = '<div class="sub-tabs">';
+    
+                ttys.forEach(tty => {
+                    const filename = state.files[username][tty];
+                    const isActive = tty === state.activeTty[username];
+                    const seenClass = state.seenTabs.has(filename) ? 'seen' : 'unseen';
+    
+                    html += `<div class="sub-tab ${isActive ? 'active' : ''} ${seenClass}" `;
+                    html += `onclick="switchTty('${username}', '${tty}')" `;
+                    html += `data-file="${filename}">`;
+                    html += tty;
+                    html += '</div>';
+                });
+    
+                html += '</div>';
+    
+                // Render terminal containers
+                ttys.forEach(tty => {
+                    const filename = state.files[username][tty];
+                    const isActive = tty === state.activeTty[username];
+    
+                    html += `<div class="sub-tab-content ${isActive ? 'active' : ''}" id="tty-${username}-${tty}">`;
+                    html += `<div class="terminal" id="term-${filename}"></div>`;
+                    html += '</div>';
+                });
+    
+                return html;
+            }
+    
+            function updateTabColors() {
+                // Update subtab colors
+                document.querySelectorAll('.sub-tab').forEach(tab => {
+                    const filename = tab.getAttribute('data-file');
+                    if (filename) {
+                        tab.classList.remove('seen', 'unseen');
+                        tab.classList.add(state.seenTabs.has(filename) ? 'seen' : 'unseen');
+                    }
+                });
+    
+                // Update parent tab colors
+                document.querySelectorAll('.tabs .tab').forEach(tab => {
+                    const username = tab.textContent;
+                    tab.classList.remove('seen', 'unseen');
+                    tab.classList.add(checkUserHasUnseen(username) ? 'unseen' : 'seen');
+                });
+            }
+    
+            function checkUserHasUnseen(username) {
+                if (!state.files[username]) return false;
+    
+                for (const tty in state.files[username]) {
+                    const filename = state.files[username][tty];
+                    if (!state.seenTabs.has(filename)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+    
+            // ============================================================================
+            // TERMINAL INITIALIZATION
+            // ============================================================================
+    
+            function initTerminals() {
+                for (const username in state.files) {
+                    for (const tty in state.files[username]) {
+                        const filename = state.files[username][tty];
+                        const element = document.getElementById(`term-${filename}`);
+    
+                        if (element && !state.terminals[filename]) {
+                            // Create new terminal
+                            state.terminals[filename] = new TerminalRenderer(element);
+    
+                            // Initialize file size (start from end of file)
+                            fetch(`?action=tail&file=${encodeURIComponent(filename)}&lastSize=0`)
+                                .then(r => r.json())
+                                .then(data => {
+                                    if (data.exists) {
+                                        state.fileSize[filename] = data.size;
+                                    }
+                                });
+                        } else if (element && state.terminals[filename]) {
+                            // Reconnect existing terminal to new element
+                            state.terminals[filename].element = element;
+                            state.terminals[filename].render();
+                        }
+                    }
+                }
+            }
+    
+            // ============================================================================
+            // EVENT HANDLERS
+            // ============================================================================
+    
+            window.switchUsername = function(username) {
+                state.activeUsername = username;
+    
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.toggle('active', tab.textContent === username);
+                });
+    
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.toggle('active', content.id === `user-${username}`);
+                });
+            };
+    
+            window.switchTty = function(username, tty) {
+                state.activeTty[username] = tty;
+    
+                const filename = state.files[username][tty];
+                state.seenTabs.add(filename);
+                updateTabColors();
+    
+                const userContent = document.getElementById(`user-${username}`);
+                userContent.querySelectorAll('.sub-tab').forEach(tab => {
+                    tab.classList.toggle('active', tab.textContent === tty);
+                });
+    
+                userContent.querySelectorAll('.sub-tab-content').forEach(content => {
+                    content.classList.toggle('active', content.id === `tty-${username}-${tty}`);
+                });
+            };
+    
+            window.changeFontSize = function(delta) {
+                if (delta === 0) {
+                    state.fontSize = 14;
+                } else {
+                    state.fontSize = Math.max(8, Math.min(32, state.fontSize + delta));
+                }
+    
+                document.querySelectorAll('.terminal').forEach(terminal => {
+                    terminal.style.fontSize = state.fontSize + 'px';
+                    terminal.style.lineHeight = '1.2';
+                });
+            };
+    
+            // ============================================================================
+            // MONITORING LOOP
+            // ============================================================================
+    
+            async function monitor() {
+                await fetchFiles();
+    
+                for (const username in state.files) {
+                    for (const tty in state.files[username]) {
+                        const filename = state.files[username][tty];
+                        await tailFile(filename);
+                    }
+                }
+            }
+    
+            // Start monitoring
+            monitor();
+            setInterval(monitor, 1000);
+        </script>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-php
+  namespace: snoop
+  labels:
+    app: nginx-php
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-php
+  template:
+    metadata:
+      labels:
+        app: nginx-php
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      initContainers:
+      - name: cert-generator
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          allowPrivilegeEscalation: true
+        image: alpine:latest
+        command:
+        - sh
+        - -c
+        - |
+          while ! apk add --no-cache openssl; do
+            sleep 1
+          done
+          if [ ! -f /certs/tls.crt ]; then
+            openssl genrsa -out /certs/tls.key 2048
+            openssl req -new -key /certs/tls.key -out /certs/tls.csr -subj "/C=US/ST=State/L=City/O=Org/CN=localhost"
+            openssl x509 -req -days 365 -in /certs/tls.csr -signkey /certs/tls.key -out /certs/tls.crt
+            rm /certs/tls.csr
+            echo "Certificate generated successfully"
+          else
+            echo "Certificate already exists"
+          fi
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
+      containers:
+      - name: php-fpm
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          allowPrivilegeEscalation: true
+        image: php:8.2-fpm
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            sed -i 's/user = www-data/user = root/g' /usr/local/etc/php-fpm.d/www.conf
+            sed -i 's/group = www-data/group = root/g' /usr/local/etc/php-fpm.d/www.conf
+            sed -i 's/listen = 127.0.0.1:9000/listen = 0.0.0.0:9000/g' /usr/local/etc/php-fpm.d/www.conf
+            php-fpm --allow-to-run-as-root
+        ports:
+        - containerPort: 9000
+          name: php-fpm
+        volumeMounts:
+        - name: php-app
+          mountPath: /var/www/html
+        - name: php-config
+          mountPath: /usr/local/etc/php/conf.d/custom.ini
+          subPath: custom.ini
+        - name: sessions
+          mountPath: /var/log/sessions
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+      - name: nginx
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          allowPrivilegeEscalation: true
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: default-config
+          mountPath: /etc/nginx/conf.d
+        - name: certs
+          mountPath: /etc/nginx/ssl
+          readOnly: true
+        - name: php-app
+          mountPath: /var/www/html
+        - name: sessions
+          mountPath: /var/log/sessions
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+      volumes:
+      - name: default-config
+        configMap:
+          name: default-config
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+      - name: certs
+        hostPath:
+          path: /etc/snoop
+      - name: php-config
+        configMap:
+          name: php-config
+      - name: sessions
+        hostPath:
+          path: /var/log/sessions
+      - name: php-app
+        configMap:
+          name: php-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-php-service
+  namespace: snoop
+spec:
+  selector:
+    app: nginx-php
+  ports:
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: 443
+    nodePort: 30000
+  type: NodePort

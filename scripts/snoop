@@ -1,0 +1,8 @@
+cat <<\EOF >>/etc/ssh/sshd_config
+Match User training*
+  ForceCommand /usr/bin/script -qf /var/log/sessions/$USER.$(tty | awk -F / '{print$3$4}')
+EOF
+systemctl restart sshd
+
+install -d -m 777 /var/log/sessions
+kubectl apply -f /assets/snoop.yaml

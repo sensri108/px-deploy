@@ -5,4 +5,4 @@ k8s_version: 1.33.5
 stop_after: 0
 cluster:
   - id: 1
-    scripts: ["etcd", "wetty", "ttysnoop", "training-bastion"]
+    scripts: ["etcd", "wetty", "snoop", "training-bastion"]
