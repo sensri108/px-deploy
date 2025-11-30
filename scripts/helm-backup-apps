@@ -53,7 +53,6 @@ cat <<EOF >> /etc/motd
 SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
 +================================================+
 PX-Central User Interface Access URL : http://$PXB_URL
-Alternate User Interface Access URL : http://$pubIP:$backupPort
 PX-Central admin user name: admin
 PX-Central admin user password: $ADMIN_PW
 +================================================+

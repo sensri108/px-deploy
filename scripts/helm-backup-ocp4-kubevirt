@@ -15,6 +15,23 @@ spec:
   wildcardPolicy: None
 EOF
 
+# create ocp route for central UI
+cat <<EOF | kubectl apply -f -
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: px-central-ui
+  namespace: central
+spec:
+  to:
+    kind: Service
+    name: px-central-ui
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None
+EOF
+
 # expose px-backup service to run pxbackupctl
 # kubectl patch svc px-backup -n central -p '{"spec":{"type":"LoadBalancer"}}'
 
@@ -44,29 +61,39 @@ sleep 20
 
 # get external px-backup route hostname
 pubIP=$(kubectl get route px-backup-ui -n central -o json |jq -r ".status.ingress[0].host")
+authIP=$(kubectl get route px-central-ui -n central -o json |jq -r ".status.ingress[0].host")
 AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null)
 AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null)
 backupPort=80
-client_secret=$(kubectl get secret --namespace central pxc-backup-secret -o jsonpath={.data.OIDC_CLIENT_SECRET} | base64 --decode)
+authPort=80
+ADMIN_PW=$(kubectl get secret pxcentral-keycloak-http -n central -o jsonpath="{.data.password}" | base64 --decode)
+#client_secret=$(kubectl get secret --namespace central pxc-backup-secret -o jsonpath={.data.OIDC_CLIENT_SECRET} | base64 --decode)
 
+px pxb init config  --px-backup-api-url $pubIP:$backupPort --pxcentral-auth-url $authIP:$authPort
+px pxb set config --pxcentral-verify-ssl false
+px pxb login --username admin --password $ADMIN_PW
+px pxb create cloudcredential --name aws-credential --provider aws --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY
+px pxb create backuplocation --name s3 --provider s3 --path $BACKUP_BUCKET --cloud-credential-name aws-credential --s3-endpoint s3.amazonaws.com --s3-region $aws_region
+px pxb create schedulepolicy --name 15min-schedule --interval-minutes 15 --interval-retain 12
+px pxb connect cluster --name cluster-1 --kubeconfig /root/.kube/config
 # Configures backup with clusters and locations
-pxbackupctl login -s http://$pubIP:$backupPort -u admin -p admin
-pxbackupctl version -e $BACKUP_POD_IP:10002
-pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY -e $BACKUP_POD_IP:10002 --orgID default -n s3 -p aws
-sleep 5
-cloud_credential_uid=$(pxbackupctl get cloudcredential -e $BACKUP_POD_IP:10002 --orgID default -o json | jq -cr '.[0].metadata.uid') 
-pxbackupctl create backuplocation --cloud-credential-name s3 --cloud-credential-Uid $cloud_credential_uid -n $BACKUP_BUCKET -p s3 --s3-endpoint https://s3.$aws_region.amazonaws.com --path $BACKUP_BUCKET --s3-region $aws_region -e $BACKUP_POD_IP:10002 --orgID default
-pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --name 15min-schedule -e $BACKUP_POD_IP:10002 --orgID default
-sleep 5
+#pxbackupctl login -s http://$pubIP:$backupPort -u admin -p admin
+#pxbackupctl version -e $BACKUP_POD_IP:10002
+#pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY -e $BACKUP_POD_IP:10002 --orgID default -n s3 -p aws
+#sleep 5
+#cloud_credential_uid=$(pxbackupctl get cloudcredential -e $BACKUP_POD_IP:10002 --orgID default -o json | jq -cr '.[0].metadata.uid') 
+#pxbackupctl create backuplocation --cloud-credential-name s3 --cloud-credential-Uid $cloud_credential_uid -n $BACKUP_BUCKET -p s3 --s3-endpoint https://s3.$aws_region.amazonaws.com --path $BACKUP_BUCKET --s3-region $aws_region -e $BACKUP_POD_IP:10002 --orgID default
+#pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --name 15min-schedule -e $BACKUP_POD_IP:10002 --orgID default
+#sleep 5
 
-pxbackupctl create cluster --name cluster-1 -k /root/.kube/config -e $BACKUP_POD_IP:10002 --orgID default
+#pxbackupctl create cluster --name cluster-1 -k /root/.kube/config -e $BACKUP_POD_IP:10002 --orgID default
 
 cat <<EOF >> /etc/motd
 +================================================+
-How to access PX-BACKUP UI
+SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
 +================================================+
-PX-Central User Interface Access URL : http://$pubIP:$backupPort
+PX-Central User Interface Access URL : http://$pubIP
 PX-Central admin user name: admin
-PX-Central admin user password: admin
+PX-Central admin user password: $ADMIN_PW
 +================================================+
 EOF
