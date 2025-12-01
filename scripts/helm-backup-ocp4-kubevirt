@@ -37,15 +37,15 @@ EOF
 
 kubectl patch svc px-backup -n central -p '{"spec":{"type":"LoadBalancer"}}'
 
-BACKUP_POD_IP=$(kubectl get svc px-backup -n central -o json | jq -r ".status.loadBalancer.ingress[0].hostname")
+pubIP=$(kubectl get svc px-backup -n central -o json | jq -r ".status.loadBalancer.ingress[0].hostname")
 
-while [ $BACKUP_POD_IP = "null" ]; do
+while [ $pubIP = "null" ]; do
   sleep 2
   echo "PX Backup grpc LB not ready"
-  BACKUP_POD_IP=$(kubectl get svc px-backup -n central -o json | jq -r ".status.loadBalancer.ingress[0].hostname")
+  pubIP=$(kubectl get svc px-backup -n central -o json | jq -r ".status.loadBalancer.ingress[0].hostname")
 done
 
-echo "PX Backup grpc LB ready: $BACKUP_POD_IP"
+echo "PX Backup grpc LB ready: $pubIP"
 
 # now as the service has a IP assigned lets check if the service is available
 #curl --connect-timeout 2 $BACKUP_POD_IP:10002 2>/dev/null
@@ -60,11 +60,11 @@ sleep 20
 # TODO: find a reliable way to detect if grpc is responding
 
 # get external px-backup route hostname
-pubIP=$(kubectl get route px-backup-ui -n central -o json |jq -r ".status.ingress[0].host")
+PXB_URL=$(kubectl get route px-backup-ui -n central -o json |jq -r ".status.ingress[0].host")
 authIP=$(kubectl get route px-central-ui -n central -o json |jq -r ".status.ingress[0].host")
 AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null)
 AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null)
-backupPort=80
+backupPort=10002
 authPort=80
 ADMIN_PW=$(kubectl get secret pxcentral-keycloak-http -n central -o jsonpath="{.data.password}" | base64 --decode)
 #client_secret=$(kubectl get secret --namespace central pxc-backup-secret -o jsonpath={.data.OIDC_CLIENT_SECRET} | base64 --decode)
@@ -92,7 +92,7 @@ cat <<EOF >> /etc/motd
 +================================================+
 SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
 +================================================+
-PX-Central User Interface Access URL : http://$pubIP
+PX-Central User Interface Access URL : http://$PXB_URL
 PX-Central admin user name: admin
 PX-Central admin user password: $ADMIN_PW
 +================================================+
