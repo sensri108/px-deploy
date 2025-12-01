@@ -216,20 +216,17 @@ func aws_connect_ec2(awscfg *aws.Config) *ec2.Client {
 }
 
 // returns an array of instance IDs
-func aws_get_instances(config *Config, client *ec2.Client) ([]string, error) {
+func aws_get_instances(config *Config, client *ec2.Client, cluster int) ([]string, error) {
 	var aws_instances []string
+	var awsfilter []types.Filter
 
-	// get instances in current VPC
-	instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
-		Filters: []types.Filter{
-			{
-				Name: aws.String("network-interface.vpc-id"),
-				Values: []string{
-					config.Aws__Vpc,
-				},
-			},
-		},
-	})
+	awsfilter = append(awsfilter, types.Filter{Name: aws.String("tag:pxd_uuid"), Values: []string{config.Pxd_uuid.String()}})
+	if cluster > 0 {
+		awsfilter = append(awsfilter, types.Filter{Name: aws.String("tag:pxd_cluster"), Values: []string{strconv.Itoa(cluster)}})
+	}
+
+	instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{Filters: awsfilter})
+
 	if err != nil {
 		fmt.Println("Got an error retrieving information about your Amazon EC2 instances:")
 		return nil, err
