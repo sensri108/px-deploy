@@ -353,9 +353,9 @@ func aws_get_node_ip(deployment string, node string) string {
 	instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
 		Filters: []types.Filter{
 			{
-				Name: aws.String("network-interface.vpc-id"),
+				Name: aws.String("tag:pxd_uuid"),
 				Values: []string{
-					config.Aws__Vpc,
+					config.Pxd_uuid.String(),
 				},
 			},
 			{
