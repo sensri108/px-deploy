@@ -66,11 +66,11 @@ func aws_create_variables(config *Config) []string {
 	tf_var_tags = append(tf_var_tags, "}\n")
 
 	switch config.Platform {
-	case "ocp4":
-		{
-			tf_variables = append(tf_variables, "ocp4_nodes = \""+config.Nodes+"\"")
-			config.Nodes = "0"
-		}
+	//	case "ocp4":
+	//		{
+	//			tf_variables = append(tf_variables, "ocp4_nodes = \""+config.Nodes+"\"")
+	//			config.Nodes = "0"
+	//		}
 	case "rancher":
 		{
 			tf_variables = append(tf_variables, "rancher_nodes = \""+config.Nodes+"\"")
@@ -103,7 +103,7 @@ func aws_create_variables(config *Config) []string {
 			tf_variables = append(tf_variables, "ocp4_domain = \""+config.Ocp4_Domain+"\"")
 			tf_variables = append(tf_variables, "ocp4_credentials_mode = \""+config.Ocp4_Credentials_Mode+"\"")
 			tf_variables = append(tf_variables, "ocp4_pull_secret = \""+base64.StdEncoding.EncodeToString([]byte(config.Ocp4_Pull_Secret))+"\"")
-			tf_variables_ocp4 = append(tf_variables_ocp4, "ocp4clusters = {")
+			tf_variables_ocp4 = append(tf_variables_ocp4, "ocp4config = [")
 		}
 	case "eks":
 		{
@@ -150,20 +150,14 @@ func aws_create_variables(config *Config) []string {
 		tf_variables = append(tf_variables, "    ebs_block_devices = [] ")
 		tf_variables = append(tf_variables, "  },")
 
-		tf_variables = append(tf_variables, "  {")
-		tf_variables = append(tf_variables, "    role = \"node\"")
-		tf_variables = append(tf_variables, "    ip_start = 100")
-		tf_variables = append(tf_variables, "    nodecount = "+tf_cluster_nodes)
-		tf_variables = append(tf_variables, "    instance_type = \""+tf_cluster_instance_type+"\"")
-		tf_variables = append(tf_variables, "    cluster = "+masternum)
-		tf_variables = append(tf_variables, "    ebs_block_devices = [")
-		tf_variables = append(tf_variables, tf_var_ebs...)
-		tf_variables = append(tf_variables, "    ]\n  },")
-
 		switch config.Platform {
 		case "ocp4":
 			{
-				tf_variables_ocp4 = append(tf_variables_ocp4, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
+				tf_variables_ocp4 = append(tf_variables_ocp4, "  {")
+				tf_variables_ocp4 = append(tf_variables_ocp4, "    cluster = "+masternum)
+				tf_variables_ocp4 = append(tf_variables_ocp4, "    nodecount = "+tf_cluster_nodes)
+				tf_variables_ocp4 = append(tf_variables_ocp4, "    instance_type = \""+tf_cluster_instance_type+"\"")
+				tf_variables_ocp4 = append(tf_variables_ocp4, "  },")
 			}
 		case "rancher":
 			{
@@ -173,6 +167,18 @@ func aws_create_variables(config *Config) []string {
 			{
 				tf_variables_eks = append(tf_variables_eks, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
 			}
+		case "k8s":
+			{
+				tf_variables = append(tf_variables, "  {")
+				tf_variables = append(tf_variables, "    role = \"node\"")
+				tf_variables = append(tf_variables, "    ip_start = 100")
+				tf_variables = append(tf_variables, "    nodecount = "+tf_cluster_nodes)
+				tf_variables = append(tf_variables, "    instance_type = \""+tf_cluster_instance_type+"\"")
+				tf_variables = append(tf_variables, "    cluster = "+masternum)
+				tf_variables = append(tf_variables, "    ebs_block_devices = [")
+				tf_variables = append(tf_variables, tf_var_ebs...)
+				tf_variables = append(tf_variables, "    ]\n  },")
+			}
 		}
 	}
 	tf_variables = append(tf_variables, "]")
@@ -180,7 +186,7 @@ func aws_create_variables(config *Config) []string {
 	switch config.Platform {
 	case "ocp4":
 		{
-			tf_variables_ocp4 = append(tf_variables_ocp4, "}")
+			tf_variables_ocp4 = append(tf_variables_ocp4, "]")
 			tf_variables = append(tf_variables, tf_variables_ocp4...)
 		}
 	case "rancher":
