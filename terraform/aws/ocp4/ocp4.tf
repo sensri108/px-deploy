@@ -8,20 +8,16 @@ variable "ocp4_credentials_mode" {
 	type 		= string
 }
 
-variable "ocp4_nodes" {
-	description = "number of worker nodes"
-	type 		= number
-}
-
 variable "ocp4_pull_secret" {
 	description = "ocp4 pull secret"
 	type 		= string
 }
 
-variable "ocp4clusters" {
-	description = "map of clusternumber & aws_type"
-	type 		= map
+variable "ocp4config" {
+	description		= "list / config of all ocp4 instances"
+	default = [{}]
 }
+
 
 resource "aws_vpc_dhcp_options" "dhcpopt" {
   domain_name          = format("%s.compute.internal",var.aws_region)
@@ -160,20 +156,34 @@ resource "aws_security_group" "sg_ocp-nodes" {
 		}
 }
 
+locals {
+  ocp4config = [
+    for ocp4cluster in var.ocp4config : {
+        instance_type 	= ocp4cluster.instance_type
+		nodecount		= ocp4cluster.nodecount
+		clusternum 		= ocp4cluster.cluster
+	}
+  ]
+}
+
+locals {
+  ocp4clusters = flatten(local.ocp4config)
+}
+
 resource "local_file" "ocp4-install-config" {
-        for_each = var.ocp4clusters
+        for_each = {for cluster in local.ocp4clusters: cluster.clusternum =>  cluster}
         content = templatefile("${path.module}/ocp4-install-config.tpl", {
-			                  tpl_sshkey 	=  tls_private_key.ssh.public_key_openssh  
+		                tpl_sshkey 	=  tls_private_key.ssh.public_key_openssh  
                         tpl_aws_region  = var.aws_region
                         tpl_aws_iamrole = aws_iam_role.node-iam-role.name
                         tpl_ocp4domain  = var.ocp4_domain
                         tpl_ocp4_credentials_mode = var.ocp4_credentials_mode
                         tpl_ocp4pullsecret = base64decode(var.ocp4_pull_secret)
                         tpl_cluster     = each.key
-                        tpl_awstype     = each.value
+                        tpl_awstype     = each.value.instance_type
                         tpl_configname  = var.config_name
                         tpl_aws_tag     = var.aws_tags
-                        tpl_nodes       = var.ocp4_nodes
+                        tpl_nodes       = each.value.nodecount
                         tpl_cidr        = var.aws_cidr_vpc
                         tpl_privsubnet  = aws_subnet.ocp4_private[each.key - 1].id
                         tpl_pubsubnet   = aws_subnet.subnet[each.key - 1].id
