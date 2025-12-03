@@ -39,19 +39,16 @@ spec:
 EOF
 
   # expose px-backup service to run pxbackupctl
-  # kubectl patch svc px-backup -n central -p '{"spec":{"type":"LoadBalancer"}}'
-
   kubectl patch svc px-backup -n central -p '{"spec":{"type":"LoadBalancer"}}'
   backupIP=$(kubectl get svc px-backup -n central -o json | jq -r ".status.loadBalancer.ingress[0].hostname")
  
   while [ $backupIP = "null" ]; do
     sleep 2
-    echo "PX Backup grpc LB not ready"
+    echo "PX Backup grpc LB not assigned"
     backupIP=$(kubectl get svc px-backup -n central -o json | jq -r ".status.loadBalancer.ingress[0].hostname")
   done
-
-  echo "PX Backup grpc LB ready: $backupIP"
-  sleep 20
+  echo "PX Backup grpc LB assigned: $backupIP"
+  
   backupPort=10002
   authIP=$(kubectl get route px-central-ui -n central -o json |jq -r ".status.ingress[0].host")
   authPort=80
@@ -83,12 +80,17 @@ spec:
 EOF
   backupPort=$(kubectl get svc px-backup-api-grpc -n central -o=jsonpath='{.spec.ports[?(@.port==10002)].nodePort}')
   PXB_URL=$(kubectl get svc px-backup-ui -n central -o=jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-  PXB_URL="http://$PXB_URL"
 fi
 
 px pxb init config  --px-backup-api-url http://$backupIP:$backupPort --pxcentral-auth-url http://$authIP:$authPort
 px pxb set config --pxcentral-verify-ssl false
 px pxb login --username admin --password $ADMIN_PW
+
+while ! px pxb version; do
+        echo "waiting for grpc availability"
+        sleep 2
+done
+
 px pxb create cloudcredential --name aws-credential --provider aws --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY
 px pxb create backuplocation --name s3 --provider s3 --path $BACKUP_BUCKET --cloud-credential-name aws-credential --s3-endpoint s3.amazonaws.com --s3-region $aws_region
 px pxb create schedulepolicy --name 15min-schedule --interval-minutes 15 --interval-retain 12
@@ -118,7 +120,7 @@ cat <<EOF >> /etc/motd
 +================================================+
 SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
 +================================================+
-PX-Central User Interface Access URL : $PXB_URL
+PX-Central User Interface Access URL : http://$PXB_URL
 PX-Central admin user name: admin
 PX-Central admin user password: $ADMIN_PW
 +================================================+
