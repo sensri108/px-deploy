@@ -1,0 +1,14 @@
+description: Two Cluster OCP with Backup & AsyncDR on a aws vm
+scripts: ["install-awscli","install-px", "licenses"]
+aws_type: "m6i.xlarge"
+platform: "ocp4"
+cloud: "aws"
+clusters: 2
+nodes: 5
+cluster:
+  - id: 1
+    scripts: ["helm-backup", "helm-backup-apps"]
+  - id: 2
+    scripts: ["clusterpair"]
+env:
+  cloud_drive: "type%3Dgp2%2Csize%3D150"
