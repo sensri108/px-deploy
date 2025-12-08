@@ -6,5 +6,5 @@ stop_after: 0
 scripts: ["install-px", "training-backup-cluster"]
 cluster:
   - id: 1
-    scripts: ["wetty", "helm-backup", "training-backup-bastion"]
+    scripts: ["wetty", "snoop", "helm-backup", "training-backup-bastion"]
     nodes: 4
