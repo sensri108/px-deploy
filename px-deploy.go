@@ -150,6 +150,7 @@ var wg sync.WaitGroup
 
 func main() {
 	var createName, createTemplate, createRegion, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber, stopName, startName string
+	var startCluster, stopCluster int
 	var destroyAll, destroyClear, destroyForce bool
 	var flags Config
 	os.Chdir("/px-deploy/.px-deploy")
@@ -267,8 +268,8 @@ func main() {
 
 	cmdStop := &cobra.Command{
 		Use:   "stop -n name",
-		Short: "Stops a deployment",
-		Long:  "Stops all of the instances in a deployment",
+		Short: "Stops a deployment [/cluster]",
+		Long:  "Stops all of the instances of a deployment [/cluster]",
 		Run: func(cmd *cobra.Command, args []string) {
 			config := parse_yaml("deployments/" + stopName + ".yml")
 			if config.Cloud == "aws" {
@@ -282,12 +283,11 @@ func main() {
 				cfg := aws_load_config(&config)
 				client := aws_connect_ec2(&cfg)
 
-				aws_instances, err := aws_get_instances(&config, client)
+				aws_instances, err := aws_get_instances(&config, client, stopCluster)
 				if err != nil {
 					panic(fmt.Sprintf("error listing aws instances %v \n", err.Error()))
 				}
 				stop_ec2_instances(client, aws_instances)
-				//fmt.Printf("%v", aws_instances)
 			} else {
 				panic("Stop only supported on AWS")
 			}
@@ -296,8 +296,8 @@ func main() {
 
 	cmdStart := &cobra.Command{
 		Use:   "start -n name",
-		Short: "Starts a deployment",
-		Long:  "Starts all of the instances in a deployment",
+		Short: "Starts a deployment [/cluster]",
+		Long:  "Starts all of the instances of a deployment [/cluster]",
 		Run: func(cmd *cobra.Command, args []string) {
 			config := parse_yaml("deployments/" + startName + ".yml")
 			if config.Cloud == "aws" {
@@ -310,13 +310,11 @@ func main() {
 
 				cfg := aws_load_config(&config)
 				client := aws_connect_ec2(&cfg)
-
-				aws_instances, err := aws_get_instances(&config, client)
+				aws_instances, err := aws_get_instances(&config, client, startCluster)
 				if err != nil {
 					panic(fmt.Sprintf("error listing aws instances %v \n", err.Error()))
 				}
 				start_ec2_instances(client, aws_instances)
-				//fmt.Printf("%v", aws_instances)
 			} else {
 				panic("Stop only supported on AWS")
 			}
@@ -530,8 +528,10 @@ func main() {
 	cmdConnect.MarkFlagRequired("name")
 
 	cmdStop.Flags().StringVarP(&stopName, "name", "n", "", "name of deployment to stop")
+	cmdStop.Flags().IntVarP(&stopCluster, "clusters", "c", 0, "optional: cluster number to stop")
 	cmdStop.MarkFlagRequired("name")
 	cmdStart.Flags().StringVarP(&startName, "name", "n", "", "name of deployment to start")
+	cmdStart.Flags().IntVarP(&startCluster, "clusters", "c", 0, "optional: cluster number to start")
 	cmdStart.MarkFlagRequired("name")
 
 	cmdKubeconfig.Flags().StringVarP(&kubeconfigName, "name", "n", "", "name of deployment to connect to")
@@ -688,7 +688,7 @@ func validate_config(config *Config) []string {
 		errormsg = append(errormsg, "Invalid Kubernetes version '"+config.K8s_Version+"'")
 	}
 
-	if !regexp.MustCompile(`^[0-9\.]+$`).MatchString(config.Px_Version) {
+	if !regexp.MustCompile(`^[0-9\.\-a-z]+$`).MatchString(config.Px_Version) {
 		errormsg = append(errormsg, "Invalid Portworx version '"+config.Px_Version+"'")
 	}
 
@@ -1259,7 +1259,7 @@ func destroy_deployment(name string, destroyForce bool) {
 		cfg := aws_load_config(&config)
 		client := aws_connect_ec2(&cfg)
 
-		aws_instances, err := aws_get_instances(&config, client)
+		aws_instances, err := aws_get_instances(&config, client, 0)
 		if err != nil {
 			panic(fmt.Sprintf("error listing aws instances %v \n", err.Error()))
 		}
@@ -1272,7 +1272,7 @@ func destroy_deployment(name string, destroyForce bool) {
 			aws_instances_split[i/196] = append(aws_instances_split[i/196], val)
 		}
 
-		aws_volumes, err := aws_get_clouddrives(aws_instances_split, client)
+		aws_volumes, err := aws_get_clouddrives(aws_instances_split, config.Pxd_uuid, client)
 		if err != nil {
 			panic(fmt.Sprintf("error listing aws clouddrives %v \n", err.Error()))
 		}

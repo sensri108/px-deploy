@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/google/uuid"
 )
 
 func aws_create_variables(config *Config) []string {
@@ -64,11 +66,11 @@ func aws_create_variables(config *Config) []string {
 	tf_var_tags = append(tf_var_tags, "}\n")
 
 	switch config.Platform {
-	case "ocp4":
-		{
-			tf_variables = append(tf_variables, "ocp4_nodes = \""+config.Nodes+"\"")
-			config.Nodes = "0"
-		}
+	//	case "ocp4":
+	//		{
+	//			tf_variables = append(tf_variables, "ocp4_nodes = \""+config.Nodes+"\"")
+	//			config.Nodes = "0"
+	//		}
 	case "rancher":
 		{
 			tf_variables = append(tf_variables, "rancher_nodes = \""+config.Nodes+"\"")
@@ -101,7 +103,7 @@ func aws_create_variables(config *Config) []string {
 			tf_variables = append(tf_variables, "ocp4_domain = \""+config.Ocp4_Domain+"\"")
 			tf_variables = append(tf_variables, "ocp4_credentials_mode = \""+config.Ocp4_Credentials_Mode+"\"")
 			tf_variables = append(tf_variables, "ocp4_pull_secret = \""+base64.StdEncoding.EncodeToString([]byte(config.Ocp4_Pull_Secret))+"\"")
-			tf_variables_ocp4 = append(tf_variables_ocp4, "ocp4clusters = {")
+			tf_variables_ocp4 = append(tf_variables_ocp4, "ocp4config = [")
 		}
 	case "eks":
 		{
@@ -148,20 +150,14 @@ func aws_create_variables(config *Config) []string {
 		tf_variables = append(tf_variables, "    ebs_block_devices = [] ")
 		tf_variables = append(tf_variables, "  },")
 
-		tf_variables = append(tf_variables, "  {")
-		tf_variables = append(tf_variables, "    role = \"node\"")
-		tf_variables = append(tf_variables, "    ip_start = 100")
-		tf_variables = append(tf_variables, "    nodecount = "+tf_cluster_nodes)
-		tf_variables = append(tf_variables, "    instance_type = \""+tf_cluster_instance_type+"\"")
-		tf_variables = append(tf_variables, "    cluster = "+masternum)
-		tf_variables = append(tf_variables, "    ebs_block_devices = [")
-		tf_variables = append(tf_variables, tf_var_ebs...)
-		tf_variables = append(tf_variables, "    ]\n  },")
-
 		switch config.Platform {
 		case "ocp4":
 			{
-				tf_variables_ocp4 = append(tf_variables_ocp4, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
+				tf_variables_ocp4 = append(tf_variables_ocp4, "  {")
+				tf_variables_ocp4 = append(tf_variables_ocp4, "    cluster = "+masternum)
+				tf_variables_ocp4 = append(tf_variables_ocp4, "    nodecount = "+tf_cluster_nodes)
+				tf_variables_ocp4 = append(tf_variables_ocp4, "    instance_type = \""+tf_cluster_instance_type+"\"")
+				tf_variables_ocp4 = append(tf_variables_ocp4, "  },")
 			}
 		case "rancher":
 			{
@@ -171,6 +167,18 @@ func aws_create_variables(config *Config) []string {
 			{
 				tf_variables_eks = append(tf_variables_eks, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
 			}
+		case "k8s":
+			{
+				tf_variables = append(tf_variables, "  {")
+				tf_variables = append(tf_variables, "    role = \"node\"")
+				tf_variables = append(tf_variables, "    ip_start = 100")
+				tf_variables = append(tf_variables, "    nodecount = "+tf_cluster_nodes)
+				tf_variables = append(tf_variables, "    instance_type = \""+tf_cluster_instance_type+"\"")
+				tf_variables = append(tf_variables, "    cluster = "+masternum)
+				tf_variables = append(tf_variables, "    ebs_block_devices = [")
+				tf_variables = append(tf_variables, tf_var_ebs...)
+				tf_variables = append(tf_variables, "    ]\n  },")
+			}
 		}
 	}
 	tf_variables = append(tf_variables, "]")
@@ -178,7 +186,7 @@ func aws_create_variables(config *Config) []string {
 	switch config.Platform {
 	case "ocp4":
 		{
-			tf_variables_ocp4 = append(tf_variables_ocp4, "}")
+			tf_variables_ocp4 = append(tf_variables_ocp4, "]")
 			tf_variables = append(tf_variables, tf_variables_ocp4...)
 		}
 	case "rancher":
@@ -214,20 +222,17 @@ func aws_connect_ec2(awscfg *aws.Config) *ec2.Client {
 }
 
 // returns an array of instance IDs
-func aws_get_instances(config *Config, client *ec2.Client) ([]string, error) {
+func aws_get_instances(config *Config, client *ec2.Client, cluster int) ([]string, error) {
 	var aws_instances []string
+	var awsfilter []types.Filter
 
-	// get instances in current VPC
-	instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
-		Filters: []types.Filter{
-			{
-				Name: aws.String("network-interface.vpc-id"),
-				Values: []string{
-					config.Aws__Vpc,
-				},
-			},
-		},
-	})
+	awsfilter = append(awsfilter, types.Filter{Name: aws.String("tag:pxd_uuid"), Values: []string{config.Pxd_uuid.String()}})
+	if cluster > 0 {
+		awsfilter = append(awsfilter, types.Filter{Name: aws.String("tag:pxd_cluster"), Values: []string{strconv.Itoa(cluster)}})
+	}
+
+	instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{Filters: awsfilter})
+
 	if err != nil {
 		fmt.Println("Got an error retrieving information about your Amazon EC2 instances:")
 		return nil, err
@@ -242,10 +247,10 @@ func aws_get_instances(config *Config, client *ec2.Client) ([]string, error) {
 	return aws_instances, nil
 }
 
-func aws_get_clouddrives(aws_instances_split []([]string), client *ec2.Client) ([]string, error) {
+func aws_get_clouddrives(aws_instances_split []([]string), uuid uuid.UUID, client *ec2.Client) ([]string, error) {
 	var aws_volumes []string
 
-	fmt.Printf("Searching for portworx clouddrive volumes:\n")
+	fmt.Printf("Searching for portworx clouddrive volumes attached to instances within VPC\n")
 	for i := range aws_instances_split {
 		//get list of attached volumes, filter for PX Clouddrive Volumes
 		volumes, err := client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
@@ -272,11 +277,35 @@ func aws_get_clouddrives(aws_instances_split []([]string), client *ec2.Client) (
 		}
 
 		for _, i := range volumes.Volumes {
-			fmt.Println("  " + *i.VolumeId)
+			fmt.Printf("  %s\n", *i.VolumeId)
 			aws_volumes = append(aws_volumes, *i.VolumeId)
 		}
 	}
-	return aws_volumes, nil
+	fmt.Printf("Searching for portworx clouddrive volumes by deployment uuid tag: %s\n", uuid.String())
+	//get list of attached volumes, filter for PX Clouddrive Volumes
+	volumes, err := client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
+		Filters: []types.Filter{
+			{
+				Name: aws.String("tag:pxd_uuid_cd"),
+				Values: []string{
+					uuid.String(),
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		fmt.Println("Error retrieving volume list by uuid:")
+		return nil, err
+	}
+
+	for _, i := range volumes.Volumes {
+		fmt.Printf("  %s\n", *i.VolumeId)
+		aws_volumes = append(aws_volumes, *i.VolumeId)
+	}
+	fmt.Println("merging volume results")
+	slices.Sort(aws_volumes)
+	return slices.Compact(aws_volumes), nil
 }
 
 func aws_delete_nodegroups(config *Config) error {
@@ -330,9 +359,9 @@ func aws_get_node_ip(deployment string, node string) string {
 	instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
 		Filters: []types.Filter{
 			{
-				Name: aws.String("network-interface.vpc-id"),
+				Name: aws.String("tag:pxd_uuid"),
 				Values: []string{
-					config.Aws__Vpc,
+					config.Pxd_uuid.String(),
 				},
 			},
 			{
@@ -685,7 +714,8 @@ func stop_ec2_instances(client *ec2.Client, instanceIDs []string) {
 func terminate_ec2_instances(client *ec2.Client, instanceIDs []string) {
 	//fmt.Printf("  %s \n", instanceIDs)
 	_, err := client.TerminateInstances(context.TODO(), &ec2.TerminateInstancesInput{
-		InstanceIds: instanceIDs,
+		InstanceIds:    instanceIDs,
+		SkipOsShutdown: aws.Bool(true),
 	})
 
 	if err != nil {
